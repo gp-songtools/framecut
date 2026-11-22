@@ -1,0 +1,18 @@
+{
+  "Dream Orphans": [
+    ["Dream Orphans.woff2", 400, "normal"],
+    ["Dream Orphans Bd.woff2", 750, "normal"],
+    ["Dream Orphans It.woff2", 400, "italic"],
+    ["Dream Orphans Bd It.woff2", 750, "italic"]
+  ],
+  "Effloresce": [
+    ["Effloresce.woff2", 400, "normal"],
+    ["Effloresce Bd.woff2", 750, "normal"],
+    ["Effloresce It.woff2", 400, "italic"],
+    ["Effloresce Bd It.woff2", 750, "italic"]
+  ],
+  "Desard": [["desard.woff2", 400, "normal"]],
+  "Xirod": [["Xirod.woff2", 400, "normal"]],
+  "Y2KBug": [["Y2Kbug.woff2", 400, "normal"]],
+  "Public Pixel": [["PublicPixel.woff2", 400, "normal"]]
+}
