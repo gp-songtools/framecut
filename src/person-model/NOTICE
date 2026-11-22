@@ -1,0 +1,10 @@
+Framecut bundles TensorFlow.js 4.22.0 with its WASM backend and the TensorFlow BodyPix 2.0 MobileNetV1 0.75
+stride-16, 1-byte quantized model. See the accompanying Apache 2.0 license texts.
+
+TensorFlow.js runtime: https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js
+TensorFlow.js WASM backend: https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.22.0/dist/
+BodyPix sources: https://github.com/tensorflow/tfjs-models/tree/master/body-pix
+Model: https://storage.googleapis.com/tfjs-models/savedmodel/bodypix/mobilenet/quant1/075/model-stride16.json
+
+Preview photograph: NASA / Robert Markowitz, S99-00858, 1998 (public domain,
+resized). https://images.nasa.gov/details/S99-00858

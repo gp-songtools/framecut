@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Framecut Studio</title>
+<style>
+/* BUNDLED_TITLE_FONT_FACES */
+:root{color-scheme:dark;--bg:#101113;--panel:#17181b;--line:#2a2c31;--muted:#a0a2ac;--lime:#d0f86a;--ink:#f2f3f5;font:13px Inter,system-ui,sans-serif}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink)}button,input,select{font:inherit}button,select{cursor:pointer;color:inherit;background:#222429;border:1px solid var(--line);border-radius:7px;padding:8px 11px}button:hover{background:#30333a}button:disabled{opacity:.35;cursor:default}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--lime);outline-offset:2px}.accent{background:var(--lime);color:#1a220e;border-color:var(--lime);font-weight:750}.accent:hover{background:#defa9d}header{height:65px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;border-bottom:1px solid var(--line);gap:12px}.brand{display:flex;align-items:center;gap:10px;font-weight:750;font-size:17px;white-space:nowrap}.mark{display:grid;place-items:center;background:var(--lime);color:#192010;width:32px;height:32px;border-radius:9px;font-size:20px}.header-right,.toolbar,.transport,.row{display:flex;align-items:center;gap:8px}.project{background:transparent;border:1px solid transparent;color:var(--ink);text-align:center;width:min(24vw,220px);padding:7px;border-radius:6px;font-weight:600}.project:hover{border-color:var(--line)}.workspace{display:grid;grid-template-columns:230px minmax(330px,1fr) 254px;min-height:460px;height:calc(100vh - 340px)}.panel{background:var(--panel);min-width:0;overflow:auto}.media{border-right:1px solid var(--line);padding:17px}.inspector{border-left:1px solid var(--line);padding:17px}.title{margin:0 0 18px;font-size:14px;font-weight:700}.media .title{margin:0}.between{justify-content:space-between}.secondary{color:var(--muted)}#import{width:100%;margin:15px 0 13px;border-style:dashed;padding:11px}.bin{display:grid;gap:7px}.asset{position:relative;width:100%;display:grid;grid-template-columns:55px 1fr 22px;gap:8px;align-items:center;text-align:left;padding:5px}.asset span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.thumb{width:55px;height:33px;object-fit:cover;background:#383b42;border-radius:4px}.monitor{min-width:0;display:grid;grid-template-rows:44px minmax(0,1fr) 52px;background:#111214}.monitorbar,.transport{padding:0 16px;justify-content:space-between}.monitorbar{display:flex;align-items:center;border-bottom:1px solid #202227}.stage{display:grid;place-items:center;padding:12px 22px;min-height:0;min-width:0;overflow:hidden}.stage canvas{display:block;max-width:100%;max-height:100%;object-fit:contain;background:#08090b;box-shadow:0 12px 38px #0007}.mono{font:12px ui-monospace,monospace;font-variant-numeric:tabular-nums}.transport{border-top:1px solid #202227}.transport .row{gap:5px}.plain{background:transparent;border-color:transparent}.play{min-width:38px;background:#303338}.section{border-top:1px solid var(--line);padding-top:14px;margin-top:15px}.section h3{font-size:12px;margin:0 0 12px}.field{display:grid;grid-template-columns:1fr 78px;align-items:center;gap:8px;margin:9px 0;color:var(--muted)}input[type=number],input[type=text],textarea{min-width:0;color:var(--ink);background:#202126;border:1px solid var(--line);border-radius:6px;padding:7px}textarea{width:100%;resize:vertical;font:inherit}input[type=range]{width:100%;accent-color:var(--lime)}.clip-name{font-weight:650;overflow-wrap:anywhere}.timeline{border-top:1px solid var(--line);background:#151619;min-height:274px}.toolbar{height:54px;padding:0 17px;border-bottom:1px solid var(--line)}.toolbar h2{font-size:13px;margin:0 9px 0 0}.spacer{flex:1}.zoom{max-width:95px}.timeline-inner{display:grid;grid-template-columns:95px minmax(0,1fr)}.tracks{border-right:1px solid var(--line);color:var(--muted);font-size:11px}.tracks div{display:flex;align-items:center;padding-left:15px;border-bottom:1px solid var(--line)}.scroll{overflow:auto}.lanes{position:relative;min-height:175px}.ruler{height:33px;position:relative;cursor:crosshair;background:repeating-linear-gradient(to right,transparent 0,transparent calc(var(--tick) - 1px),#45464e calc(var(--tick) - 1px),#45464e var(--tick)) left bottom/100% 5px no-repeat;border-bottom:1px solid var(--line)}.tick{position:absolute;top:7px;color:var(--muted);font-size:10px}.lane{height:53px;display:flex;align-items:center;border-bottom:1px solid var(--line);background-image:linear-gradient(to right,#2a2c3150 1px,transparent 1px);background-size:calc(var(--tick) * 5) 100%}.lane.video{height:66px}.clip{position:absolute;height:42px;min-width:4px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;text-align:left;border-radius:5px;padding:5px;color:#eaf9e9;border:1px solid #477258;background:#254638;cursor:grab}.clip.picture{height:55px;background-color:#305343;background-size:auto 100%;background-position:center}.clip.title-clip{background:#38446e;border-color:#677ab3;height:34px}.clip.audio-clip{background:#4c3866;border-color:#8869a7;height:34px}.clip.selected{outline:2px solid var(--lime);outline-offset:-2px}.clip span{background:#09100dbe;padding:3px 5px;border-radius:3px;font-size:11px}.handle{position:absolute;top:0;bottom:0;width:7px;cursor:ew-resize}.handle.start{left:0}.handle.end{right:0}.playhead{position:absolute;top:0;bottom:0;width:1px;background:var(--lime);pointer-events:none;z-index:4}.playhead:before{content:"";position:absolute;left:-5px;width:11px;height:11px;background:var(--lime);clip-path:polygon(0 0,100% 0,100% 60%,50% 100%,0 60%)}footer{padding:9px 16px;border-top:1px solid var(--line);color:var(--muted);min-height:32px;font-size:11px}dialog{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:22px;width:min(420px,90vw)}dialog::backdrop{background:#000a}dialog progress{width:100%;accent-color:var(--lime)}.drop{outline:2px dashed var(--lime);outline-offset:-3px}@media(max-width:1000px){.workspace{grid-template-columns:170px minmax(265px,1fr) 190px}.media,.inspector{padding:12px}.toolbar{padding:0 8px;gap:5px}}@media(max-width:730px){.workspace{grid-template-columns:1fr 1fr;height:auto}.monitor{grid-column:1/-1;grid-row:1;height:340px}.media,.inspector{max-height:300px;min-height:120px}.toolbar{flex-wrap:wrap;height:auto;min-height:54px;padding:8px}.toolbar h2,.zoom{display:none}.timeline-inner{grid-template-columns:67px 1fr}.tracks div{padding-left:7px}.project{width:25vw}header{padding:0 9px}.brand{font-size:14px}}
+
+.toolbar button[aria-pressed="true"]{color:var(--lime);border-color:var(--lime)}
+.snap-guide{position:absolute;top:0;bottom:0;width:2px;background:#70dfff;pointer-events:none;z-index:5}
+.visual-choice{grid-template-columns:minmax(0,1fr) minmax(0,1.6fr)}
+.visual-choice select{min-width:0;padding:6px}
+.text-emphasis{gap:5px;margin-top:8px}
+.title-appearance{min-width:0;margin:12px 0 0;padding:0 8px;border:1px solid var(--line);border-radius:6px}
+.title-appearance legend{padding:0 4px;font-weight:700}
+.title-appearance-toggle input{justify-self:end;accent-color:var(--lime)}
+.inspector-slider{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 8px;margin:9px 0;color:var(--muted)}
+.inspector-slider input[type=range]{grid-column:1/-1;min-width:0;margin:0}
+.inspector .slider-number{width:66px;max-width:100%;padding:2px 5px;text-align:right;font-variant-numeric:tabular-nums}
+.text-emphasis button{flex:1;padding:5px;text-align:center}
+.text-emphasis button[aria-pressed=true]{color:var(--lime);border-color:var(--lime)}
+[data-text-style=textBold]{font-weight:750}
+[data-text-style=textItalic]{font-style:italic}
+[data-text-style=textUnderline]{text-decoration:underline}
+[data-text-style=textStrike]{text-decoration:line-through}
+.inspector input[type=color]{width:100%;height:30px;padding:2px;border:1px solid var(--line);border-radius:5px;background:#202126;cursor:pointer}
+.lane.video,.lane[data-track=title],.lane[data-track=overlay],.lane[data-track=audio]{position:relative}
+.audio-waveform{position:absolute;bottom:2px;height:14px;pointer-events:none}
+.clip.picture .audio-waveform{background:#100d18d9}
+.extracted-audio-lane{position:relative}
+.audio-fades{position:absolute;top:50%;height:34px;transform:translateY(-50%);z-index:2;pointer-events:none}
+.audio-fade-region{position:absolute;bottom:2px;height:14px;background:#201431c7}
+.audio-fade-region[data-edge=in]{left:0;clip-path:polygon(0 0,100% 100%,0 100%)}
+.audio-fade-region[data-edge=out]{right:0;clip-path:polygon(100% 0,100% 100%,0 100%)}
+.audio-fade-handle{position:absolute;top:-6px;width:14px;height:11px;transform:translateX(-50%);padding:0;border:1px solid #493263;border-radius:3px;background:#decbfa;cursor:ew-resize;pointer-events:auto;touch-action:none}
+.audio-fade-handle:hover,.audio-fade-handle:focus-visible{background:#f7ecff}
+.audio-fades.close-handles [data-fade=audioFadeOut]{top:6px}
+#extractAudio{margin-top:9px}
+.clip.audio-clip>span{position:absolute;top:2px;left:4px;max-width:calc(100% - 8px);padding:1px 4px;line-height:12px;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+.clip.overlay-clip{background:#594026;border-color:#9a7245;height:34px}
+.lane[data-track=effect]{position:relative}
+.clip.effect-clip{background:#493161;border-color:#9a76bf;height:36px}
+.overlay-key-controls{gap:4px;margin:10px 0}
+.overlay-key-controls button{padding:5px 7px}
+#toggleOverlayKey{flex:1}
+.overlay-key-diamond{position:absolute;top:29px;z-index:3;width:16px;height:16px;padding:0;transform:translateX(-50%);background:transparent;border:0;cursor:ew-resize;touch-action:none}
+.overlay-key-diamond::before{content:"";display:block;width:8px;height:8px;margin:auto;transform:rotate(45deg);background:var(--lime);border:1px solid #273512}
+.overlay-key-diamond:hover,.overlay-key-diamond.dragging{background:#30333a}
+.overlay-key-diamond.dragging::before{background:#fff}
+.lane[data-track=title] .overlay-key-diamond{top:43px;height:10px}
+.timeline:has(.lane.video .audio-fades){--video-fade-space:24px}
+.timeline .lane.video,.tracks .video-track{height:calc(94px + var(--video-fade-space,0px))}
+.timeline .lane.video{padding-bottom:calc(14px + var(--video-fade-space,0px))}
+.lane.video .audio-fades{top:12px;height:55px;transform:none}
+.lane.video .audio-fade-handle{top:68px}
+.lane.video .audio-fades.close-handles [data-fade=audioFadeOut]{top:80px}
+.lane.video .overlay-key-diamond{top:66px;height:13px}
+.lane.video .cut-marker{bottom:calc(30px + var(--video-fade-space,0px))}
+.monitor{min-height:0}
+.stage{position:relative;grid-template:minmax(0,1fr) / minmax(0,1fr);touch-action:none}
+.stage.picking-body-subject{cursor:crosshair!important}
+.body-subject-controls{margin-top:12px}
+.body-subject-controls button{padding:5px 7px}
+#bodySubjectTargets{position:absolute;inset:0;pointer-events:none}
+#bodySubjectTargets button{position:absolute;transform:translate(-50%,-145%);pointer-events:auto;z-index:4;padding:2px 7px;background:var(--lime);color:#101113;border-color:#101113;font-weight:700}
+.stage canvas{min-width:0;min-height:0}
+.overlay-selection{position:absolute;pointer-events:none;border:1px solid var(--lime);box-shadow:0 0 0 1px #17181bb0}
+.overlay-selection i{position:absolute;width:10px;height:10px;background:var(--lime);border:1px solid #17181b;border-radius:2px;transform:translate(-50%,-50%)}
+.overlay-selection i:nth-child(1){left:0;top:0}
+.overlay-selection i:nth-child(2){left:100%;top:0}
+.overlay-selection i:nth-child(3){left:100%;top:100%}
+.overlay-selection i:nth-child(4){left:0;top:100%}
+#importOverlay{width:100%;margin:10px 0}
+#stickers{margin-bottom:12px}
+.cut-marker{position:absolute;z-index:3;bottom:2px;transform:translateX(-50%);width:20px;height:20px;padding:0;border-color:#54636e;border-radius:5px;line-height:1;background:#222b34;color:#e1eaf2}
+.cut-marker.has-transition{color:#152228;background:#70dfff;border-color:#70dfff}
+#cutMenu{position:fixed;inset:auto;margin:0;width:min(248px,calc(100vw - 16px));border:1px solid #465560;border-radius:9px;background:var(--panel);color:var(--ink);padding:12px;box-shadow:0 8px 24px #0008}
+#cutMenu strong{font-size:13px}
+#cutMenu [hidden]{display:none}
+.transition-span{position:absolute;z-index:3;top:4px;height:17px;background:#28505f;border:1px solid #70dfff;border-radius:4px;color:#e5faff;pointer-events:none}
+.transition-span span{position:absolute;left:7px;top:1px;white-space:nowrap;padding:0 3px;background:#193743;border-radius:2px;font:10px/13px ui-monospace,monospace}
+.transition-resize{position:absolute;left:-5px;top:-2px;width:10px;height:19px;cursor:ew-resize;padding:0;border:1px solid #70dfff;border-radius:3px;background:#28505f;pointer-events:auto;touch-action:none}
+.preset-help{margin:5px 0 9px;font-size:11px}
+.transition-presets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.preset-tile{display:grid;gap:4px;padding:4px;min-width:0;cursor:grab;text-align:left;font-size:10px}
+.preset-tile:active{cursor:grabbing}
+.preset-tile canvas{display:block;width:100%;border-radius:3px}
+.cut-marker.cut-drop-target{background:var(--lime);color:#171d10;border-color:var(--lime);outline:2px solid var(--lime);outline-offset:2px}
+.clip.effect-drop-target,.clip.animation-drop-target{outline:2px solid var(--lime);outline-offset:-2px;box-shadow:inset 0 0 0 4px #d0f86455}
+.effect-intensity{display:grid;grid-template-columns:1fr auto;gap:3px 8px;margin:10px 0;color:var(--muted)}
+.effect-intensity output{color:var(--ink);font-variant-numeric:tabular-nums}
+.effect-intensity input[type=range]{grid-column:1/-1;margin:0}
+.intensity-keyframes{grid-column:1/-1;margin-top:5px}
+.intensity-keyframes>button{width:100%}
+.intensity-keyframes ul{list-style:none;margin:5px 0 0;padding:0}
+.intensity-keyframes li{display:grid;grid-template-columns:1fr auto;gap:4px;margin-top:4px}
+.intensity-keyframes li button{padding:4px 6px;font-size:11px}
+.intensity-keyframes .at-playhead button:first-child{border-color:var(--lime);color:var(--lime)}
+.overlay-key-list li{align-items:start}
+.overlay-key-list li button:first-child{text-align:left}
+.overlay-key-list li button:first-child>span{display:block;line-height:1.4;color:var(--muted)}
+.intensity-diamond,.volume-diamond{position:absolute;z-index:3;top:31px;width:16px;height:16px;padding:0;transform:translateX(-50%);border:0;border-radius:3px;background:transparent;cursor:ew-resize;touch-action:none}
+.intensity-diamond.at-start{top:43px}
+.intensity-diamond::before,.volume-diamond::before{content:"";display:block;width:8px;height:8px;margin:auto;transform:rotate(45deg);background:#d0f86a;border:1px solid #273512;border-radius:1px}
+.intensity-diamond:hover,.intensity-diamond.dragging{background:#26321d}
+.intensity-diamond.dragging::before{background:#fff}
+.volume-diamond{top:auto;bottom:0;height:14px}
+.volume-diamond::before{background:#7edbff;border-color:#174654}
+.volume-diamond:hover,.volume-diamond.dragging{background:#27434d}
+.volume-diamond.dragging::before{background:#fff}
+.intensity-easing{grid-column:1/-1;display:grid;grid-template-columns:1fr minmax(0,1.3fr);align-items:center;gap:5px;font-size:11px}
+.intensity-easing select{min-width:0;padding:3px 4px;font-size:11px}
+.intensity-curve{grid-column:1/-1;font-size:11px}
+.intensity-curve summary{cursor:pointer;padding:4px 0}
+.curve-graph{position:relative;background:#111820;border-radius:5px;touch-action:none}
+.curve-graph canvas{display:block;width:100%;height:auto}
+.curve-handle,.curve-playhead{position:absolute;transform:translate(-50%,-50%);border-radius:50%}
+.curve-graph .curve-handle{width:15px;height:15px;padding:0;border:2px solid #d0f86a;background:#253324;cursor:grab;touch-action:none}
+.curve-playhead{width:8px;height:8px;background:#70dfff;box-shadow:0 0 0 1px #172c39;pointer-events:none}
+.motion-presets{margin-top:8px}
+.motion-presets>summary{cursor:pointer;padding:5px 0;font-size:12px;font-weight:700}
+[aria-labelledby=effectsHeading]>.motion-presets>summary{font-size:13px;font-weight:750}
+.motion-presets .transition-presets{margin-top:4px}
+.stage canvas{background-color:#15181d;background-image:conic-gradient(#272d35 25%,#15181d 0 50%,#272d35 0 75%,#15181d 0);background-size:16px 16px}
+.background-option[hidden]{display:none}
+.background-option input[type=color]{width:100%;height:30px;padding:2px;border:1px solid var(--line);border-radius:5px;background:#222429;cursor:pointer}
+.background-option button{width:100%}
+.background-filename{display:block;margin-top:5px;overflow-wrap:anywhere;font-size:11px}
+#previewMask[aria-pressed=true]{color:var(--lime);border-color:var(--lime)}
+.animation-tabs{display:flex;gap:4px;margin:8px 0 6px}
+.animation-tabs:empty{display:none}
+.animation-tabs button{flex:1;min-width:0;padding:5px 2px;font-size:10px}
+.animation-tile{cursor:pointer}
+.animation-tile[draggable=true]{cursor:grab}
+.animation-tile[draggable=true]:active{cursor:grabbing}
+.animation-tile[aria-pressed=true],.animation-tabs button[aria-pressed=true]{border-color:var(--lime);color:var(--lime)}
+#animationPresets>.animation-tile{width:100%;padding:5px}
+.animation-setting-name{font-size:11px;color:var(--muted);margin-top:9px}
+.animation-setting-name button{padding:3px 6px;font-size:10px;white-space:nowrap}
+.clip-animation-spans{position:absolute;top:19px;height:13px;z-index:3;pointer-events:none}
+.lane[data-track=title] .clip-animation-spans{top:30px}
+.clip-animation-span{position:absolute;top:0;height:13px;border:1px solid #edb85d;border-radius:3px;background:#513922;color:#fff1ca}
+.clip-animation-label{display:block;width:100%;height:11px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 8px;border:0;border-radius:2px;background:transparent;color:inherit;text-align:left;font:9px/11px ui-monospace,monospace;pointer-events:auto}
+.clip-animation-label:hover{background:#754e29}
+.clip-animation-resize{position:absolute;right:0;top:-1px;height:13px;width:7px;border:0;border-radius:2px;padding:0;background:#edb85d;pointer-events:auto;cursor:ew-resize;touch-action:none}
+.clip-animation-span.outgoing .clip-animation-resize{right:auto;left:0}
+.clip-animation-resize:hover,.clip-animation-resize:focus-visible{background:#ffe2a6}
+.clip-animation-badge{position:absolute;z-index:2;top:6px;height:12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 4px;border:1px solid #b6874c;border-radius:3px;background:#3c2d20;color:#ffe3aa;font:9px/10px ui-monospace,monospace}
+.lane[data-track=title] .clip-animation-badge{top:8px}
+.clip-animation-badge:hover{background:#704b28}
+.animation-clipboard{display:flex;gap:4px;margin-bottom:6px}
+.animation-clipboard button,#animationMenu button{padding:4px 6px;font-size:10px}
+#animationTabs:empty+.animation-clipboard{display:none}
+#animationMenu{position:fixed;inset:auto;margin:0;padding:4px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px}
+#animationMenu button:not([hidden]){display:block;width:100%;text-align:left}
+#animationMenu button+button{margin-top:3px}
+#menuDeleteAnimations:not(:empty){margin-top:3px}
+.range-tools{gap:4px}
+.range-tools button{padding-inline:8px;white-space:nowrap}
+.range-tools #loopRange[aria-pressed=true]{color:#a9eaff;border-color:#6bbbd5;background:#223741}
+.range-tools .range-clear{padding-inline:6px}
+#rangeBounds{color:#b9dfeb;white-space:nowrap;font-size:11px}
+.timeline-range{position:absolute;top:0;bottom:0;z-index:3;border-inline:1px dashed #96bbc6;pointer-events:none}
+.timeline-range.looping{border-color:#8fddf4;border-inline-style:solid}
+.timeline-range::before,.timeline-range::after{content:"";position:absolute;left:0;right:0;background:#85d7ef29}
+.timeline-range::before{top:0;height:32px;border-bottom:2px solid #85d7ef80}
+.timeline-range::after{top:var(--range-lane-top);height:var(--range-lane-height)}
+.timeline-range.looping::before,.timeline-range.looping::after{background:#85d7ef48}
+.range-tool,.range-tool *{cursor:crosshair!important;user-select:none}
+.range-tool{touch-action:none}
+@media(max-width:1120px){.toolbar{flex-wrap:wrap;height:auto;min-height:54px;padding-block:7px}}
+.timeline-inner{grid-template-columns:138px minmax(0,1fr)}
+.tracks .track-mixer{display:grid;grid-template-columns:minmax(0,1fr) auto;align-content:center;gap:2px 6px;padding:3px 8px 3px 12px}
+.tracks .audio-track{height:53px}
+.track-mute{font-size:10px;line-height:14px;padding:1px 5px}
+.track-mute[aria-pressed=true]{color:#ffcf9d;background:#492d22;border-color:#a26b48}
+.tracks .track-mixer .inspector-slider{grid-column:1/-1;display:grid;align-items:center;grid-template-columns:minmax(0,1fr) 32px;gap:5px;margin:0;padding:0;border:0}
+.track-mixer .inspector-slider input[type=range]{grid-area:1/1;margin:0}
+.track-mixer .slider-number{grid-area:1/2;width:100%;padding:1px 3px;text-align:right;font-variant-numeric:tabular-nums;appearance:textfield}
+.track-mixer .slider-number::-webkit-inner-spin-button,.track-mixer .slider-number::-webkit-outer-spin-button{appearance:none;margin:0}
+@media(max-width:730px){.timeline-inner{grid-template-columns:106px minmax(0,1fr)}.tracks .track-mixer{padding-inline:6px}}
+</style></head>
+<body>
+<header><div class="brand"><div class="mark" aria-hidden="true">◩</div>Framecut Studio</div><input class="project" id="project" aria-label="Project name" value="Above the Clouds"><div class="header-right"><button id="new" title="New project">New</button><button class="accent" id="export">Export ↗</button></div></header>
+<main class="workspace">
+<aside class="panel media" id="media"><div class="row between"><h2 class="title">Media</h2><span id="assetCount" class="secondary"></span></div><button id="import">＋ Import media</button><input id="file" type="file" accept="video/*,image/*,audio/*" multiple hidden><div class="bin" id="bin"></div>
+<section class="section" aria-labelledby="overlayHeading"><h2 class="title" id="overlayHeading">Stickers &amp; overlays</h2>
+<button id="importOverlay">＋ Import image overlay</button><input id="overlayFile" type="file" accept="image/*" multiple hidden>
+<p class="preset-help secondary">Click to add at the playhead, or drag to the Overlay track.</p>
+<h3>Stickers</h3><div class="transition-presets" id="stickers"></div>
+<h3>Animated overlays</h3><div class="transition-presets" id="overlayAnimations"></div></section>
+<section class="section" aria-labelledby="animationHeading"><h2 class="title" id="animationHeading">Animations</h2>
+<p class="preset-help secondary" id="animationHelp">Select a video, image, or text clip.</p>
+<div id="animationTabs" class="animation-tabs" role="group" aria-label="Animation type"></div>
+<div class="animation-clipboard"><button type="button" id="copyAnimation" disabled>Copy animation</button><button type="button" id="pasteAnimation" disabled>Paste animation</button></div>
+<div id="animationPresets"></div></section>
+<section class="section" aria-labelledby="presetsHeading"><h2 class="title" id="presetsHeading">Transitions</h2><p class="preset-help secondary">Drag a preset onto a cut.</p><details class="motion-presets"><summary>Wipe and motion</summary><div class="transition-presets" id="motionPresets"></div></details><details class="motion-presets"><summary>Camera and blur</summary><div class="transition-presets" id="cameraPresets"></div></details><details class="motion-presets"><summary>Digital Distortion</summary><div class="transition-presets" id="distortionPresets"></div></details><details class="motion-presets"><summary>3D and Reveal</summary><div class="transition-presets" id="revealPresets"></div></details><details class="motion-presets"><summary>Rhythm and Automation</summary><div class="transition-presets" id="rhythmPresets"></div></details></section>
+<section class="section" aria-labelledby="effectsHeading"><h2 class="title" id="effectsHeading">Effects</h2>
+<p class="preset-help secondary">Click to add at the playhead. Drag onto the Effects track or directly onto a video or image clip.</p>
+<details class="motion-presets" open><summary>Video Effects</summary>
+<details class="motion-presets" open><summary>Trending/Viral</summary><div class="transition-presets" id="trendingEffectPresets"></div></details>
+<details class="motion-presets"><summary>Glitch &amp; Distortion</summary><div class="transition-presets" id="glitchEffectPresets"></div></details>
+<details class="motion-presets"><summary>Light &amp; Glow</summary><div class="transition-presets" id="lightEffectPresets"></div></details>
+<details class="motion-presets"><summary>Blur &amp; Focus</summary><div class="transition-presets" id="blurEffectPresets"></div></details>
+<details class="motion-presets"><summary>Retro &amp; Film</summary><div class="transition-presets" id="retroEffectPresets"></div></details>
+<details class="motion-presets"><summary>Nightclub and Party</summary><div class="transition-presets" id="partyEffectPresets"></div></details>
+<details class="motion-presets"><summary>Texture &amp; Overlay</summary><div class="transition-presets" id="textureEffectPresets"></div></details>
+<details class="motion-presets"><summary>Artistic &amp; Stylized</summary><div class="transition-presets" id="artisticEffectPresets"></div></details>
+<details class="motion-presets"><summary>Split Screen &amp; Mirror</summary><div class="transition-presets" id="splitEffectPresets"></div></details>
+<details class="motion-presets"><summary>Frames &amp; Borders</summary><div class="transition-presets" id="frameEffectPresets"></div></details>
+<details class="motion-presets"><summary>Looks</summary><div class="transition-presets" id="effectPresets"></div></details></details>
+<details class="motion-presets"><summary>Body Effects</summary>
+<details class="motion-presets" open><summary>Strokes and Outlines</summary><div class="transition-presets" id="outlineEffectPresets"></div></details>
+<details class="motion-presets"><summary>Clone and Trail</summary><div class="transition-presets" id="cloneTrailEffectPresets"></div></details>
+<details class="motion-presets"><summary>Auras and Energy</summary><div class="transition-presets" id="auraEnergyEffectPresets"></div></details>
+<details class="motion-presets"><summary>Body Distortion</summary><div class="transition-presets" id="bodyDistortionEffectPresets"></div></details>
+<details class="motion-presets"><summary>Moody &amp; Dark</summary><div class="transition-presets" id="moodyBodyEffectPresets"></div></details>
+<details class="motion-presets"><summary>Subject Effects</summary><div class="transition-presets" id="subjectEffectPresets"></div></details></details>
+<details class="motion-presets"><summary>Photo Effects</summary><p class="preset-help secondary">No presets yet.</p></details></section></aside>
+<section class="monitor" aria-label="Preview"><div class="monitorbar"><strong>Preview</strong><select id="ratio" aria-label="Aspect ratio"><option>16:9</option><option>9:16</option><option>1:1</option></select></div><div class="stage"><canvas id="canvas" width="1280" height="720"></canvas><div id="bodySubjectTargets" hidden></div><div class="overlay-selection" id="overlaySelection" aria-hidden="true" hidden><i></i><i></i><i></i><i></i></div></div><div class="transport"><span class="mono" id="clock">00:00.00</span><div class="row"><button class="plain" id="back" aria-label="Go to start">|◀</button><button class="play" id="play" aria-label="Play">▶</button><button class="plain" id="forward" aria-label="Go to end">▶|</button></div><span class="mono secondary" id="duration"></span></div></section>
+<aside class="panel inspector"><h2 class="title">Inspector</h2><div id="inspect"></div></aside>
+</main>
+<section class="timeline" aria-label="Timeline"><div class="toolbar"><h2>Timeline</h2><button id="undo" title="Undo (Ctrl+Z)">↶</button><button id="redo" title="Redo (Ctrl+Shift+Z)">↷</button><button id="split" title="Split at playhead (S)">✂ Split</button><button id="remove" title="Delete selected clip">Delete</button><button id="rippleDelete" title="Delete and shift later clips on this track">Ripple Delete</button><button id="snap" aria-pressed="true" title="Snap to clip edges and the playhead">Snap</button><button id="magnet" aria-pressed="false" title="Keep the video track contiguous when inserting, rearranging, trimming, or deleting clips">Main-track magnet</button><button id="addTitle">＋ Text</button><div class="range-tools row" role="group" aria-label="Timeline preview range"><button id="rangeTool" aria-pressed="false" title="Drag on a track or ruler to select a range. You can also Shift-drag or set the bounds at the playhead with I and O.">Range</button><button id="loopRange" aria-pressed="false" title="Loop the selected range during preview" disabled>Loop</button><button id="clearRange" class="range-clear plain" aria-label="Clear range" title="Clear range" hidden>×</button><output id="rangeBounds" class="mono" aria-label="Selected range bounds" aria-live="polite" hidden></output></div><span class="spacer"></span><label class="secondary" for="zoom">Zoom</label><input class="zoom" id="zoom" type="range" min="25" max="220" value="78"></div>
+<div class="timeline-inner"><div class="tracks"><div style="height:33px">TRACKS</div><div style="height:53px">Text</div><div style="height:53px">Overlay</div><div id="effectTrackLabel" style="height:53px">Effects</div>
+<div class="track-mixer video-track" data-mix-track="visual"><span class="track-name">Video</span><button class="track-mute" type="button" aria-label="Mute Video track" aria-pressed="false">Mute</button></div>
+<div class="track-mixer audio-track" data-mix-track="audio"><span class="track-name">Audio</span><button class="track-mute" type="button" aria-label="Mute Audio track" aria-pressed="false">Mute</button></div>
+</div><div class="scroll" id="scroll"><div class="lanes" id="lanes"><div class="ruler" id="ruler"></div><div class="lane" data-track="title"></div><div class="lane" data-track="overlay"></div><div class="lane" id="effectLane" data-track="effect"></div><div class="lane video" data-track="visual"></div><div class="lane" data-track="audio"></div><div id="timelineRange" class="timeline-range" aria-hidden="true" hidden></div><div class="playhead" id="playhead"></div><div class="snap-guide" id="snapGuide" aria-hidden="true" hidden></div></div></div></div></section>
+<footer id="status" role="status">Space to play · S to split · Drag clip edges to trim</footer>
+<dialog id="dialog"><h2>Export video</h2><p id="exportText" class="secondary">Render the timeline to a downloadable video. Keep this tab open during export.</p><label class="field">Format <select id="format"></select></label><progress id="progress" max="1" value="0" hidden></progress><div class="row" style="justify-content:flex-end;margin-top:16px"><button id="cancel">Close</button><button id="render" class="accent">Render video</button></div></dialog>
+<template id="extractedAudioLabel"><div class="track-mixer audio-track"><span class="track-name"></span><button class="track-mute" type="button">Mute</button></div></template>
+<div id="animationMenu" popover role="group" aria-label="Clip actions">
+<button id="menuCopyAnimation" type="button">Copy animation</button><button id="menuPasteAnimation" type="button">Paste animation</button><button id="menuExtractAudio" type="button" hidden>Extract Audio</button><div id="menuDeleteAnimations"></div></div>
+<div id="cutMenu" popover role="dialog" aria-labelledby="cutHeading">
+<div class="row between"><strong id="cutHeading">Transition</strong><button class="plain" type="button" popovertarget="cutMenu" popovertargetaction="hide" aria-label="Close transition editor">&times;</button></div>
+<label class="field visual-choice">Type <select id="cutType"></select></label>
+<label class="field" id="cutDurationRow" hidden>Duration (s) <input id="cutDuration" type="number" min=".05" max="10" step=".01" value=".5"></label>
+<button id="cutRemove" type="button" hidden>Remove transition</button>
+</div>
+<!-- PERSON_MODEL_BUNDLE -->
+<script>/* APP_SCRIPT */</script>
+</body></html>
