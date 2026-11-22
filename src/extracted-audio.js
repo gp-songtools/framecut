@@ -19,26 +19,38 @@ function hasEmbeddedAudio(asset) {
   return check;
 }
 
+async function loadExtractedAudioAsset(source, trackNumber) {
+  // Separate media elements let the two clips seek and play independently.
+  const media = document.createElement('audio');
+  media.preload = 'metadata';
+  const asset = { type: 'audio', name: source.name + ' (audio)', media, url: source.url,
+    duration: source.duration, sourceVideo: source, trackNumber };
+  try {
+    await new Promise((resolve, reject) => {
+      media.addEventListener('loadedmetadata', resolve, { once: true });
+      media.addEventListener('error', () => reject(Error('This video’s audio could not be opened.')), { once: true });
+      media.src = source.url;
+    });
+    return asset;
+  } catch (error) {
+    releaseMediaAsset(asset);
+    throw error;
+  }
+}
+
 async function extractAudio(clip) {
   if (!canExtractAudio(clip) || exporting || pendingAudioExtractions.has(clip)) return;
   pendingAudioExtractions.add(clip);
   const source = assets.get(clip.asset);
   notify('Checking video audio…');
-  let media;
+  let asset;
   let added = false;
   try {
     if (!await hasEmbeddedAudio(source)) {
       notify('This video has no readable audio track.');
       return;
     }
-    // Use a separate media element so the new track can seek and play independently.
-    media = document.createElement('audio');
-    media.preload = 'metadata';
-    await new Promise((resolve, reject) => {
-      media.addEventListener('loadedmetadata', resolve, { once: true });
-      media.addEventListener('error', () => reject(Error('This video’s audio could not be opened.')), { once: true });
-      media.src = source.url;
-    });
+    asset = await loadExtractedAudioAsset(source);
     if (!clips.includes(clip) || !canExtractAudio(clip) || exporting) return;
     pause();
     remember();
@@ -48,8 +60,8 @@ async function extractAudio(clip) {
       at: clip.at, start: clip.start, end: clip.end, volume: clip.volume ?? 1 };
     if (clip.volumeKeys) audio.volumeKeys = structuredClone(clip.volumeKeys);
     if (clip.audioFadeIn || clip.audioFadeOut) Object.assign(audio, audioFadeDurations(clip));
-    assets.set(track, { type: 'audio', name: source.name + ' (audio)', media, url: source.url,
-      duration: source.duration, sourceVideo: source, trackNumber });
+    asset.trackNumber = trackNumber;
+    assets.set(track, asset);
     updateTrackMix(track, trackMixFor('visual'));
     clip.audioExtracted = true;
     clips.push(audio);
@@ -62,10 +74,7 @@ async function extractAudio(clip) {
     notify(error.message);
   } finally {
     pendingAudioExtractions.delete(clip);
-    if (media && !added) {
-      media.removeAttribute('src');
-      media.load();
-    }
+    if (asset && !added) releaseMediaAsset(asset);
   }
 }
 

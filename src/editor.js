@@ -3259,7 +3259,7 @@ function backgroundInspector(clip) {
         return;
       }
       const image = id();
-      backgroundImages.set(image, { bitmap, name: source.name });
+      backgroundImages.set(image, { bitmap, name: source.name, file: source });
       setBackgroundMode(clip, 'image', image);
     } catch {
       if (backgroundRequests.get(clip) === request) notify('Could not open background image: ' + source.name);
@@ -4029,10 +4029,19 @@ function addAsset(assetId) {
   refresh();
 }
 
-async function importAsset(file, overlayAt) {
+function releaseMediaAsset(asset) {
+  asset.gain?.disconnect();
+  if (asset.type !== 'image') {
+    asset.media.pause();
+    asset.media.removeAttribute('src');
+    asset.media.load();
+  }
+  if (!asset.sourceVideo) URL.revokeObjectURL(asset.url);
+}
+
+async function loadMediaAsset(file, assetId) {
   const type = file.type.split('/')[0];
   if (!['image', 'video', 'audio'].includes(type)) throw Error('Unsupported media: ' + file.name);
-  if (overlayAt !== undefined && type !== 'image') throw Error('Choose an image for the overlay: ' + file.name);
   const url = URL.createObjectURL(file);
   const media = type === 'image' ? new Image() : document.createElement(type);
   try {
@@ -4053,16 +4062,15 @@ async function importAsset(file, overlayAt) {
       still.getContext('2d').drawImage(media, 0, 0, 160, 90);
       thumb = still.toDataURL('image/jpeg', .7);
       features = sceneFeatures(still);
+    }
+    const asset = { name: file.name, type, media, url, duration, thumb, features, file };
+    if (type === 'video') {
+      asset.hasAudio = await hasEmbeddedAudio(asset);
       media.addEventListener('seeked', () => {
-        if (!playback && !exporting) draw();
+        if (assets.get(assetId) === asset && !playback && !exporting) draw();
       });
     }
-    const assetId = id();
-    const asset = { name: file.name, type, media, url, duration, thumb, features, file };
-    if (type === 'video') asset.hasAudio = await hasEmbeddedAudio(asset);
-    assets.set(assetId, asset);
-    if (overlayAt === undefined) addAsset(assetId);
-    else addOverlay({ asset: assetId, at: overlayAt });
+    return asset;
   } catch (error) {
     URL.revokeObjectURL(url);
     throw error;
@@ -4071,11 +4079,24 @@ async function importAsset(file, overlayAt) {
 
 async function importFiles(files, overlayAt) {
   pause();
+  const revision = projectRevision;
   const errors = [];
   for (const file of files) {
     try {
-      await importAsset(file, overlayAt);
+      if (overlayAt !== undefined && !file.type.startsWith('image/')) {
+        throw Error('Choose an image for the overlay: ' + file.name);
+      }
+      const assetId = id();
+      const asset = await loadMediaAsset(file, assetId);
+      if (revision !== projectRevision) {
+        releaseMediaAsset(asset);
+        return;
+      }
+      assets.set(assetId, asset);
+      if (overlayAt === undefined) addAsset(assetId);
+      else addOverlay({ asset: assetId, at: overlayAt });
     } catch (error) {
+      if (revision !== projectRevision) return;
       errors.push(error.message);
     }
   }
@@ -4442,3 +4463,4 @@ connectOverlayPreview();
 connectBodySubjectPreview();
 connectAnimationClipboard();
 refresh();
+connectProjectFiles();
