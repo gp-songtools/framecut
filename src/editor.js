@@ -3463,6 +3463,14 @@ function inspector() {
     extract.onclick = () => extractAudio(clip);
     panel.append(extract);
   }
+  if (clip.track === 'audio') {
+    const importLyrics = document.createElement('button');
+    importLyrics.type = 'button';
+    importLyrics.id = 'importLyrics';
+    importLyrics.textContent = 'Import Lyrics';
+    importLyrics.onclick = () => openLyricsDialog(clip);
+    panel.append(importLyrics);
+  }
   const section = document.createElement('div');
   section.className = 'section';
   panel.append(section);
@@ -4152,9 +4160,13 @@ function remove(ripple = false) {
   refresh();
 }
 
+function createTitleClip(text, at, seconds) {
+  return { id: id(), track: 'title', text, at, start: 0, end: seconds, size: 64 };
+}
+
 function addTitle() {
   remember();
-  const clip = { id: id(), track: 'title', text: 'Your title', at: time, start: 0, end: 3, size: 64 };
+  const clip = createTitleClip('Your title', time, 3);
   clips.push(clip);
   selected = clip.id;
   refresh();
@@ -4432,7 +4444,7 @@ $('dialog').oncancel = event => {
   exporting.cancel = true;
 };
 window.addEventListener('keydown', event => {
-  if (event.target.closest('input, textarea, select, [contenteditable=true]') || $('dialog').open) return;
+  if (event.target.closest('input, textarea, select, [contenteditable=true]') || document.querySelector('dialog[open]')) return;
   const shortcut = event.key.toLowerCase();
   if (!event.ctrlKey && !event.metaKey && !event.altKey && (shortcut === 'i' || shortcut === 'o')) {
     event.preventDefault();
@@ -4464,3 +4476,4 @@ connectBodySubjectPreview();
 connectAnimationClipboard();
 refresh();
 connectProjectFiles();
+connectLyricsImport();

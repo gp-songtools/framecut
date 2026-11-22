@@ -34,7 +34,14 @@
 .audio-fade-handle{position:absolute;top:-6px;width:14px;height:11px;transform:translateX(-50%);padding:0;border:1px solid #493263;border-radius:3px;background:#decbfa;cursor:ew-resize;pointer-events:auto;touch-action:none}
 .audio-fade-handle:hover,.audio-fade-handle:focus-visible{background:#f7ecff}
 .audio-fades.close-handles [data-fade=audioFadeOut]{top:6px}
-#extractAudio{margin-top:9px}
+#extractAudio,#importLyrics{margin-top:9px}
+#lyricsDialog{width:min(500px,90vw)}
+#lyricsDialog h2{margin:0 0 8px}
+#lyricsDialog label[for=lyricsText]{display:block;margin:12px 0 6px}
+#lyricsDialog textarea{font-family:ui-monospace,monospace}
+#lyricsMessage{color:#ffd1a0}
+#lyricsMessage:empty{display:none}
+#lyricsActions{margin-top:12px;flex-wrap:wrap}
 .clip.audio-clip>span{position:absolute;top:2px;left:4px;max-width:calc(100% - 8px);padding:1px 4px;line-height:12px;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
 .clip.overlay-clip{background:#594026;border-color:#9a7245;height:34px}
 .lane[data-track=effect]{position:relative}
@@ -227,6 +234,22 @@
 </div><div class="scroll" id="scroll"><div class="lanes" id="lanes"><div class="ruler" id="ruler"></div><div class="lane" data-track="title"></div><div class="lane" data-track="overlay"></div><div class="lane" id="effectLane" data-track="effect"></div><div class="lane video" data-track="visual"></div><div class="lane" data-track="audio"></div><div id="timelineRange" class="timeline-range" aria-hidden="true" hidden></div><div class="playhead" id="playhead"></div><div class="snap-guide" id="snapGuide" aria-hidden="true" hidden></div></div></div></div></section>
 <footer id="status" role="status">Space to play · S to split · Drag clip edges to trim</footer>
 <dialog id="dialog"><h2>Export video</h2><p id="exportText" class="secondary">Render the timeline to a downloadable video. Keep this tab open during export.</p><label class="field">Format <select id="format"></select></label><progress id="progress" max="1" value="0" hidden></progress><div class="row" style="justify-content:flex-end;margin-top:16px"><button id="cancel">Close</button><button id="render" class="accent">Render video</button></div></dialog>
+<dialog id="lyricsDialog" aria-labelledby="lyricsHeading">
+  <form id="lyricsForm">
+    <h2 id="lyricsHeading">Import Lyrics</h2>
+    <p id="lyricsAudio" class="secondary"></p>
+    <label for="lyricsText">Paste timed LRC from Auralyrics</label>
+    <textarea id="lyricsText" rows="7" spellcheck="false" placeholder="[00:04.50] Your first lyric" autofocus></textarea>
+    <input id="lyricsFile" type="file" accept=".lrc" hidden>
+    <p id="lyricsMessage" role="status"></p>
+    <div class="row" id="lyricsActions">
+      <button id="chooseLyricsFile" type="button">Open .lrc File</button>
+      <span class="spacer"></span>
+      <button id="cancelLyrics" type="button">Cancel</button>
+      <button id="applyLyrics" type="submit" class="accent">Import Lyrics</button>
+    </div>
+  </form>
+</dialog>
 <template id="extractedAudioLabel"><div class="track-mixer audio-track"><span class="track-name"></span><button class="track-mute" type="button">Mute</button></div></template>
 <div id="animationMenu" popover role="group" aria-label="Clip actions">
 <button id="menuCopyAnimation" type="button">Copy animation</button><button id="menuPasteAnimation" type="button">Paste animation</button><button id="menuExtractAudio" type="button" hidden>Extract Audio</button><div id="menuDeleteAnimations"></div></div>
