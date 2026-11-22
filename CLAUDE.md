@@ -34,6 +34,7 @@
 - Use `extracted-audio.js` for independent audio playback and lanes. Extracted clips have `track: 'audio'` and a unique `audioTrack` lane ID.
 - Use `timelineTrack(clip)` for operations scoped to a specific lane. `track-mixer.js` combines clip volume/keyframes, the track mixer, and `audio-fades.js` gain.
 - Use `timeline-range.js` for timeline range selection and preview looping.
+- Use `project-files.js` for offline project files. Save a versioned JSON manifest plus original media bytes in one `.framecut` file. Stage restored media before replacing the active project.
 - Export in `renderExport()` through canvas capture and the Web Audio mix with MediaRecorder. The browser creates the output download from a blob.
 - Deploy via `.github/workflows/pages.yml`. Actions rebuilds from committed source and publishes only `_site/index.html`.
 
@@ -43,7 +44,7 @@
 - Make editor changes in `src/`. Root `index.html` and `_site/` are generated and ignored by Git.
 - Treat `main` as a deployment branch. Preserve the existing repository files and history. Push only when the user authorizes it.
 - Keep imported media, drafts, personal test files, and credentials out of Git and the Pages artifact. The deployed app and repository are public.
-- Treat the timeline as session-only. Reloading loses edits.
+- Save changes explicitly with Save Project and resume with Open Project. Project files include media and settings. Undo history starts fresh on open.
 - Keep snapping toggleable and independent of the main-track magnet. Dragging and trimming snap to nearby clip edges and the playhead with a guide.
 - With the magnet on, keep the visual track contiguous on move, trim, and Delete. Insert new visual clips at the boundary nearest the playhead.
 - With the magnet off, append new visual clips and preserve gaps on regular Delete. Keep Ripple Delete scoped to the selected lane.

@@ -178,9 +178,10 @@
 .track-mixer .slider-number{grid-area:1/2;width:100%;padding:1px 3px;text-align:right;font-variant-numeric:tabular-nums;appearance:textfield}
 .track-mixer .slider-number::-webkit-inner-spin-button,.track-mixer .slider-number::-webkit-outer-spin-button{appearance:none;margin:0}
 @media(max-width:730px){.timeline-inner{grid-template-columns:106px minmax(0,1fr)}.tracks .track-mixer{padding-inline:6px}}
+@media(max-width:780px){header{height:auto;min-height:65px;flex-wrap:wrap;padding-block:8px}.header-right{flex-wrap:wrap}}
 </style></head>
 <body>
-<header><div class="brand"><div class="mark" aria-hidden="true">◩</div>Framecut Studio</div><input class="project" id="project" aria-label="Project name" value="Above the Clouds"><div class="header-right"><button id="new" title="New project">New</button><button class="accent" id="export">Export ↗</button></div></header>
+<header><div class="brand"><div class="mark" aria-hidden="true">◩</div>Framecut Studio</div><input class="project" id="project" aria-label="Project name" value="Above the Clouds"><div class="header-right"><button id="new" title="New project">New</button><button id="openProject">Open Project</button><button id="saveProject">Save Project</button><button class="accent" id="export">Export ↗</button><input id="projectFile" type="file" accept=".framecut" hidden></div></header>
 <main class="workspace">
 <aside class="panel media" id="media"><div class="row between"><h2 class="title">Media</h2><span id="assetCount" class="secondary"></span></div><button id="import">＋ Import media</button><input id="file" type="file" accept="video/*,image/*,audio/*" multiple hidden><div class="bin" id="bin"></div>
 <section class="section" aria-labelledby="overlayHeading"><h2 class="title" id="overlayHeading">Stickers &amp; overlays</h2>
