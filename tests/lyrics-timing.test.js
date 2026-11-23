@@ -40,6 +40,34 @@ test('moves a zero-time Whisper result past the actual start of the audio', () =
   assert.equal(run('alignWrittenLyrics(["Get ready"],' + heard + ', 5, 0.6).cues[0].time'), .6);
 });
 
+test('uses the matching Whisper phrase boundary after an instrumental intro', () => {
+  const segments = '[{text:"The quiet garden",start:7,end:8.4}]';
+  const words = '[{word:"The",start:0,end:7.2},{word:"quiet",start:7.2,end:7.5},{word:"garden",start:7.5,end:8}]';
+  const heard = 'normalizeLyricWords(' + words + ', 10, 0.025,' + segments + ')';
+  assert.deepEqual(run('alignWrittenLyrics(["The QUIET garden!"], ' + heard + ', 10, 0.025).cues'),
+    [{ text: 'The QUIET garden!', time: 7 }]);
+});
+
+test('repairs a stretched opening word when word timing is the only evidence', () => {
+  const input = [
+    { word: 'The', start: .025, end: 7.25 },
+    { word: 'quiet', start: 7.25, end: 7.5 },
+    { word: 'apple', start: 7.5, end: 7.75 },
+    { word: 'garden', start: 7.75, end: 8 }
+  ];
+  const heard = 'normalizeLyricWords(' + JSON.stringify(input) + ', 10, .025)';
+  assert.equal(run(heard + '[0].start'), 7);
+  assert.equal(run(heard + '[1].start'), 7.25);
+  assert.equal(run('normalizeLyricWords(' + JSON.stringify(input) + ', 10, 3)[0].start'), 3);
+});
+
+test('keeps an unmatched first line after the instrumental lead-in', () => {
+  const words = '[{word:"unclear",start:7,end:7.5},{word:"garden",start:10,end:10.5}]';
+  const result = run('alignWrittenLyrics(["Unrecognized line.","Garden."],' + words + ',12,.025)');
+  assert.deepEqual(result.cues.map(cue => cue.time), [7, 10]);
+  assert.equal(result.matched, 1);
+});
+
 test('uses Unicode word segmentation for alignment', () => {
   const result = run('alignWrittenLyrics(["你好世界！"], [{word:"你好",start:1,end:2},{word:"世界",start:2,end:3}], 5)');
   assert.deepEqual(result, { matched: 1, cues: [{ time: 1, text: '你好世界！' }] });

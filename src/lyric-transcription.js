@@ -85,7 +85,7 @@ async function transcribeLyricsInCloud(samples, provider, key, signal) {
   if (response.status === 401 || response.status === 403) throw Error(label + ' rejected the API key or its permissions.');
   if (!response.ok) throw Error(label + ' transcription failed (HTTP ' + response.status + ').');
   const { words, segments } = await response.json();
-  return Array.isArray(words) && words.length ? words : wordsFromLyricSegments(segments ?? []);
+  return { words: Array.isArray(words) ? words : [], segments: Array.isArray(segments) ? segments : [] };
 }
 
 async function transcribeLyricsOnDevice(samples, signal, setStatus) {
@@ -109,7 +109,7 @@ async function transcribeLyricsOnDevice(samples, signal, setStatus) {
       worker.onmessage = ({ data }) => {
         if (data.status) setStatus(data.status);
         else if (data.error) finish(reject, Error('In-browser Whisper could not transcribe this clip. ' + data.error));
-        else finish(resolve, data.words);
+        else finish(resolve, data);
       };
       worker.postMessage({ files, samples }, [samples.buffer, ...Object.values(files).map(bytes => bytes.buffer)]);
     });
@@ -217,5 +217,5 @@ async function transcribeLyricsLive(samples, context, signal) {
     if (result.cursor <= cursor + .001) throw Error('The browser speech service stopped listening. Try In-browser Whisper.');
     cursor = result.cursor;
   }
-  return wordsFromLyricSegments(segments);
+  return { segments };
 }

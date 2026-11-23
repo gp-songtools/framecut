@@ -28,8 +28,8 @@ function wordsFromLyricSegments(segments) {
   });
 }
 
-function normalizeLyricWords(words, duration, firstSignal) {
-  return words.filter(item => typeof item.word === 'string' && item.word.trim() &&
+function normalizeLyricWords(words, duration, firstSignal, segments = []) {
+  const timed = words.filter(item => typeof item.word === 'string' && item.word.trim() &&
     Number.isFinite(item.start) && item.start < duration)
     .map(item => {
       const start = Math.max(firstSignal, item.start);
@@ -37,6 +37,36 @@ function normalizeLyricWords(words, duration, firstSignal) {
       return { ...item, word: item.word.trim(), start, end };
     })
     .sort((left, right) => left.start - right.start);
+  if (!timed.length) return timed;
+
+  const first = timed[0];
+  const phrase = segments.find(({ text, start }) =>
+    typeof text === 'string' && text.trim() && Number.isFinite(start) && start < duration);
+  if (phrase && phrase.start - first.start > .15) {
+    const opening = timed.slice(0, 4).flatMap(({ word }) => lyricTokens(word));
+    const phraseTokens = lyricTokens(phrase.text);
+    const count = Math.min(opening.length, phraseTokens.length, 3);
+    if (count && phraseTokens.slice(0, count).every((token, i) => token === opening[i])) {
+      for (const word of timed) {
+        if (word.start >= phrase.start) break;
+        word.start = phrase.start;
+        word.end = Math.max(word.start, word.end);
+      }
+      return timed;
+    }
+  }
+
+  // Word alignment can stretch the opening word from the clip boundary to the vocals.
+  const next = timed[1];
+  if (next && first.start <= .15 && Math.abs(first.end - next.start) <= .2) {
+    const durations = timed.slice(1, 7).map(word => word.end - word.start)
+      .filter(seconds => seconds >= .06 && seconds <= 1.2).sort((a, b) => a - b);
+    const typical = durations[Math.floor(durations.length / 2)];
+    if (durations.length >= 3 && first.end - first.start > Math.max(2.5, typical * 6)) {
+      first.start = Math.min(next.start, first.end - typical);
+    }
+  }
+  return timed;
 }
 
 function groupLyricWords(words) {
@@ -128,20 +158,23 @@ function alignWrittenLyrics(lines, words, duration, firstSignal = 0) {
   });
   const matched = alignLyricTokenTimes(written, heard);
   if (!matched.size) return null;
+  const vocalStart = Math.max(firstSignal, heard[0].time);
   const wordDuration = Math.max(.12, Math.min(.6,
     (words.at(-1).end - words[0].start) / heard.length));
   const times = ranges.map(({ from, to }) => {
     for (let i = from; i < to; i++) {
-      if (matched.has(i)) return Math.max(firstSignal, matched.get(i) - (i - from) * wordDuration);
+      if (matched.has(i)) return Math.max(vocalStart, matched.get(i) - (i - from) * wordDuration);
     }
     return null;
   });
   const anchors = times.flatMap((time, i) => time === null ? [] : [i]);
   const weights = ranges.map(({ from, to }) => Math.max(1, to - from));
   const first = anchors[0], last = anchors.at(-1);
-  for (let i = first - 1; i >= 0; i--) times[i] = times[i + 1] - weights[i] * wordDuration;
-  if (times[0] < firstSignal) {
-    for (let i = 0; i < first; i++) times[i] = firstSignal + (times[first] - firstSignal) * i / first;
+  const openingWeight = weights.slice(0, first).reduce((sum, weight) => sum + weight, 0);
+  let openingElapsed = 0;
+  for (let i = 0; i < first; i++) {
+    times[i] = vocalStart + (times[first] - vocalStart) * openingElapsed / openingWeight;
+    openingElapsed += weights[i];
   }
   for (let a = 1; a < anchors.length; a++) {
     const lo = anchors[a - 1], hi = anchors[a];

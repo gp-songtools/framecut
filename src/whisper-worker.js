@@ -35,12 +35,26 @@ self.onmessage = async ({ data: { files, samples } }) => {
     };
     const transcribe = await pipeline('automatic-speech-recognition', 'whisper-tiny', { quantized: true });
     self.postMessage({ status: 'Transcribing the selected clip…' });
+    const decoded = [];
     const result = await transcribe(samples, {
-      task: 'transcribe', chunk_length_s: 30, stride_length_s: 5, return_timestamps: 'word'
+      task: 'transcribe', chunk_length_s: 30, stride_length_s: 5, return_timestamps: 'word',
+      chunk_callback: ({ tokens, stride }) => decoded.push({ tokens, stride })
     });
-    self.postMessage({ words: (result.chunks ?? []).map(({ text, timestamp }) => ({
-      word: text, start: timestamp?.[0], end: timestamp?.[1]
-    })) });
+    // The pinned Transformers.js pipeline flattens away phrase bounds in word mode.
+    // Decode the same timestamp tokens again to recover phrase bounds without another inference.
+    const timePrecision = transcribe.processor.feature_extractor.config.chunk_length /
+      transcribe.model.config.max_source_positions;
+    const [, phrases] = transcribe.tokenizer._decode_asr(decoded, {
+      time_precision: timePrecision, return_timestamps: true
+    });
+    self.postMessage({
+      words: (result.chunks ?? []).map(({ text, timestamp }) => ({
+        word: text, start: timestamp?.[0], end: timestamp?.[1]
+      })),
+      segments: phrases.chunks.map(({ text, timestamp }) => ({
+        text, start: timestamp?.[0], end: timestamp?.[1]
+      }))
+    });
   } catch (error) {
     self.postMessage({ error: error.message });
   }

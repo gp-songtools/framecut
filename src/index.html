@@ -45,6 +45,7 @@
 #lyricsTranscriber .field{margin:7px 0}
 #lyricsTranscriber .row+label{display:block;margin-top:8px}
 #lyricsEngineInfo{margin:8px 0}
+#lyricsKeyStatus:empty{display:none}
 #lyricsMessage{color:#ffd1a0}
 #lyricsMessage:empty{display:none}
 #lyricsActions{margin-top:12px;flex-wrap:wrap}
@@ -288,6 +289,12 @@
           <select id="lyricsCloudProvider"><option value="groq">Groq</option><option value="openai">OpenAI</option></select>
         </label>
         <label class="field">API key <input id="lyricsCloudKey" type="password" autocomplete="off" spellcheck="false"></label>
+        <div class="row">
+          <label><input id="rememberLyricsCloudKey" type="checkbox" aria-describedby="lyricsKeyStorageInfo"> Remember API key on this device</label>
+          <button id="forgetLyricsCloudKey" type="button" hidden>Forget saved key</button>
+        </div>
+        <p id="lyricsKeyStorageInfo" class="secondary">Other pages on this site can access saved keys.</p>
+        <p id="lyricsKeyStatus" class="secondary" role="status"></p>
       </div>
       <p id="lyricsEngineInfo" class="secondary"></p>
       <div class="row">
