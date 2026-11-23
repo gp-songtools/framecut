@@ -36,7 +36,8 @@
 - Use `timelineTrack(clip)` for operations scoped to a specific lane. `track-mixer.js` combines clip volume/keyframes, the track mixer, and `audio-fades.js` gain.
 - Use `timeline-range.js` for timeline range selection and preview looping.
 - Use `audio-visualizers.js` for audio clip visualizers ported from AuraLyrics. `clip.visualizer` holds the settings. Each frame is a function of source time: stateful analysis is replayed over the preceding two seconds, so preview, scrubbing and export match.
-- Use `song-spec.js` for read-only Song Spec input. Keep `src/songspec.js` byte-identical to the GP Song Tools canonical copy. Use timed LRC for lyric clips.
+- Use `song-spec.js` to read Song Spec Lyrics (untimed; fills the lyrics box) and to write the Timed lyrics section (owner `framecut`) through `SongSpec.setSection`, asking first when `confirmReason` returns text. Keep `src/songspec.js` (v1.1.0) byte-identical to the GP Song Tools canonical copy.
+- Use timed LRC for lyric clips. Timed lyrics saved to the Song Spec use the lyrics box times, which match song time only for the full master audio.
 - Use `lyrics-timing.js` for word alignment and attach timings in source time. Use `lyric-transcription.js` for audio from the selected trim and transcription providers.
 - Use `project-files.js` for offline project files. Save a versioned JSON manifest plus original media bytes in one `.framecut` file. Stage restored media before replacing the active project.
 - Export in `renderExport()` through canvas capture and the Web Audio mix with MediaRecorder. The browser creates the output download from a blob.
