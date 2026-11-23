@@ -22,6 +22,7 @@ breaks while Whisper estimates timestamps. Review the timestamps and choose
 
 Select an audio clip and choose a **Visualizer** preset in the Inspector. The 13
 presets, palettes and beat bands come from AuraLyrics Studio. Adjust the palette,
-the band it reacts to, reactivity, glow, opacity, size and position, or add a
-palette backdrop. The visualizer follows the clip's source audio through playback,
+the band it reacts to, reactivity, glow, opacity, width, height and position, or
+add a palette backdrop. With the clip selected, drag the visualizer in the preview
+to move it, or drag a corner to resize it. The visualizer follows the clip's source audio through playback,
 scrubbing, trims, splits and export, and it is saved with the project.

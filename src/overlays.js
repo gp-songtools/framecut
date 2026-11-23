@@ -533,6 +533,7 @@ function layerOnScreen(clip, position) {
 }
 
 function canManipulateLayer(clip, position) {
+  if (clip?.track === 'audio') return Boolean(clip.visualizer) && layerOnScreen(clip, position);
   return hasLayerTransform(clip) && layerOnScreen(clip, position) &&
     (clip.track !== 'visual' || clips.findLast(item => item.track === 'visual' && layerOnScreen(item, position)) === clip);
 }
@@ -551,6 +552,7 @@ function textTransformBounds(clip) {
 }
 
 function previewOverlayBounds(clip, position) {
+  if (clip.track === 'audio') return visualizerBounds(clip);
   const pose = overlayPose(clip, clip.start + position - clip.at, canvas);
   const image = assets.get(clip.asset)?.media;
   const [width, height] = clip.track === 'visual' ? visualTransformBounds(clip, image)
@@ -608,17 +610,30 @@ function previewOverlayHit(event) {
     if (corner) return { clip, bounds, corner };
   }
   if (x < 0 || y < 0 || x > canvas.width || y > canvas.height) return null;
-  for (const track of ['title', 'overlay', 'visual']) {
+  const inside = candidate => {
+    const bounds = previewOverlayBounds(candidate, position);
+    const [u, v] = rotateOverlayPoint(x - bounds.x, y - bounds.y, -bounds.angle);
+    return Math.abs(u) <= bounds.halfW && Math.abs(v) <= bounds.halfH && { clip: candidate, bounds };
+  };
+  // Visualizers draw above overlays. A selected one takes the pointer; an unselected one does
+  // only where no video or image is under it, so a full-frame visualizer never hides the video.
+  const visualizers = clips.filter(candidate => candidate.track === 'audio' && candidate.visualizer &&
+    layerOnScreen(candidate, position)).reverse();
+  for (const track of ['title', 'overlay', 'audio', 'visual']) {
+    if (track === 'audio') {
+      const hit = visualizers.filter(candidate => candidate.id === selected).map(inside).find(Boolean);
+      if (hit) return hit;
+      continue;
+    }
     for (let i = clips.length - 1; i >= 0; i--) {
       const candidate = clips[i];
       if (candidate.track !== track || !layerOnScreen(candidate, position)) continue;
-      const bounds = previewOverlayBounds(candidate, position);
-      const [u, v] = rotateOverlayPoint(x - bounds.x, y - bounds.y, -bounds.angle);
-      if (Math.abs(u) <= bounds.halfW && Math.abs(v) <= bounds.halfH) return { clip: candidate, bounds };
+      const hit = inside(candidate);
+      if (hit) return hit;
       if (track === 'visual') break;
     }
   }
-  return null;
+  return visualizers.map(inside).find(Boolean) ?? null;
 }
 
 function connectOverlayPreview() {
@@ -635,6 +650,14 @@ function connectOverlayPreview() {
     const { clip, bounds, corner } = hit;
     selected = clip.id;
     refresh();
+    if (clip.track === 'audio') {
+      previewOverlayDrag = {
+        clip, corner, visualizer: true, state: snapshot(), id: event.pointerId, x: event.clientX, y: event.clientY,
+        scale: overlayPreviewMetrics().scale, original: { ...clip.visualizer }, changed: false
+      };
+      stage.setPointerCapture(event.pointerId);
+      return;
+    }
     const [x, y] = corner ?? [0, 0];
     const diagonal = rotateOverlayPoint(x * bounds.halfW, y * bounds.halfH, bounds.angle);
     const at = overlaySourceTime(clip);
@@ -660,6 +683,15 @@ function connectOverlayPreview() {
       return;
     }
     if (event.pointerId !== drag.id) return;
+    if (drag.visualizer) {
+      if (!drag.changed && Math.hypot(event.clientX - drag.x, event.clientY - drag.y) < 2) return;
+      const dx = (event.clientX - drag.x) / drag.scale / canvas.width;
+      const dy = (event.clientY - drag.y) / drag.scale / canvas.height;
+      dragVisualizerBox(drag.clip.visualizer, drag.original, drag.corner, dx, dy);
+      drag.changed = true;
+      draw();
+      return;
+    }
     const { clip, bounds, corner, diagonal: [cx, cy], original } = drag;
     const dx = (event.clientX - drag.x) / drag.scale;
     const dy = (event.clientY - drag.y) / drag.scale;
@@ -691,7 +723,11 @@ function connectOverlayPreview() {
   for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) stage.addEventListener(event, finish);
 }
 
-function restoreOverlayDrag({ clip, originalFields, originalKeys }) {
+function restoreOverlayDrag({ clip, originalFields, originalKeys, visualizer, original }) {
+  if (visualizer) {
+    clip.visualizer = original;
+    return;
+  }
   if (originalKeys?.length) clip.overlayKeys = originalKeys;
   else for (const [key, value] of originalFields) {
     if (value === undefined) delete clip[key];
