@@ -77,11 +77,12 @@ function pasteClipAnimation(clip) {
 
 function showAnimationMenu(event, clip, property) {
   const extractable = !property && canExtractAudio(clip);
+  const lyricsImportable = !property && clip.track === 'audio';
   const copyable = Boolean(animationCopyData(clip, property));
   const pasteable = canPasteClipAnimation(clip);
-  const removable = animationTabs[clip.track].filter(([, slot]) =>
+  const removable = (animationTabs[clip.track] ?? []).filter(([, slot]) =>
     (!property || slot === property) && currentPreset(clip, slot));
-  if (!copyable && !pasteable && !removable.length && !extractable) return;
+  if (!copyable && !pasteable && !removable.length && !extractable && !lyricsImportable) return;
   event.preventDefault();
   event.stopPropagation();
   animationMenuTarget = { id: clip.id, property };
@@ -95,6 +96,12 @@ function showAnimationMenu(event, clip, property) {
     menu.hidePopover();
     const target = clips.find(item => item.id === clip.id);
     if (target) extractAudio(target);
+  };
+  const lyrics = $('menuImportLyrics');
+  lyrics.hidden = !lyricsImportable;
+  lyrics.onclick = () => {
+    menu.hidePopover();
+    openLyricsDialog(clips.find(item => item.id === clip.id));
   };
   const deleteActions = $('menuDeleteAnimations');
   deleteActions.replaceChildren();
@@ -124,7 +131,7 @@ function showAnimationMenu(event, clip, property) {
 
 function animationClipboardKey(event) {
   if ((!event.ctrlKey && !event.metaKey) || event.altKey || event.shiftKey ||
-      event.target.closest('input, textarea, select, [contenteditable=true]') || $('dialog').open) return;
+      event.target.closest('input, textarea, select, [contenteditable=true]') || document.querySelector('dialog[open]')) return;
   const key = event.key.toLowerCase();
   const control = event.target.closest('[data-animation-clip], .clip[data-id]');
   const clip = control ? clips.find(item => item.id === (control.dataset.animationClip ?? control.dataset.id)) : active();

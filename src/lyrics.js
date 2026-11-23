@@ -59,8 +59,12 @@ function createLyricsClips(cues, audio) {
 }
 
 function openLyricsDialog(audio) {
-  if (openingProject || exporting) return;
+  if (audio?.track !== 'audio' || openingProject || exporting) return;
   pause();
+  if (selected !== audio.id) {
+    selected = audio.id;
+    refresh();
+  }
   lyricsAudioClip = audio;
   lyricsFileRevision++;
   $('lyricsAudio').textContent = 'Sync to ' + assets.get(audio.asset).name;
@@ -77,6 +81,7 @@ function connectLyricsImport() {
   const text = $('lyricsText');
   const message = $('lyricsMessage');
   const apply = $('applyLyrics');
+  $('timelineImportLyrics').onclick = () => openLyricsDialog(active());
   $('chooseLyricsFile').onclick = () => input.click();
   $('cancelLyrics').onclick = () => dialog.close();
   text.oninput = () => {

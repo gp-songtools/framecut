@@ -3796,7 +3796,9 @@ function renderTimeline() {
       button.append(handle);
     }
     button.onpointerdown = event => dragClip(event, clip);
-    if (animationTabs[clip.track]) button.oncontextmenu = event => showAnimationMenu(event, clip);
+    if (animationTabs[clip.track] || clip.track === 'audio') {
+      button.oncontextmenu = event => showAnimationMenu(event, clip);
+    }
     button.onclick = event => {
       if (event.detail === 0) {
         selected = clip.id;
@@ -3872,7 +3874,11 @@ function refresh() {
   reconcileTimelineRange();
   updateHistoryButtons();
   syncTrackMixer();
-  $('remove').disabled = $('rippleDelete').disabled = !active();
+  const clip = active();
+  $('remove').disabled = $('rippleDelete').disabled = !clip;
+  const lyrics = $('timelineImportLyrics');
+  lyrics.disabled = clip?.track !== 'audio';
+  lyrics.title = lyrics.disabled ? 'Select an audio clip first' : 'Import timed lyrics for this audio clip';
   renderTimeline();
   inspector();
   draw(Boolean(playback));
