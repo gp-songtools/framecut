@@ -206,6 +206,8 @@ async function runLyricTranscription() {
     const firstSample = samples.findIndex(sample => Math.abs(sample) > .0001);
     if (firstSample < 0) throw Error('The selected part of the clip is silent.');
     const firstSignal = firstSample / lyricSampleRate;
+    // Read the level onset before the samples are transferred to a worker.
+    const audioOnset = detectLyricOnset(samples, lyricSampleRate);
     let result;
     if (method === 'cloud') {
       setStatus('Transcribing with ' + lyricCloudProviders[provider].label + ' Whisper…');
@@ -223,7 +225,7 @@ async function runLyricTranscription() {
     }
     const { words, segments } = result;
     const timed = normalizeLyricWords(words?.length ? words : wordsFromLyricSegments(segments),
-      duration, firstSignal, segments);
+      duration, firstSignal, segments, audioOnset);
     if (!timed.length) throw Error('No timed speech or singing was detected in the selected clip.');
     const alignment = align ? alignWrittenLyrics(lines, timed, duration, firstSignal) : null;
     if (align && !alignment) throw Error('Whisper could not match your lyrics to this audio. Check the selected clip and lyrics.');

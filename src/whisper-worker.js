@@ -45,7 +45,7 @@ self.onmessage = async ({ data: { files, samples } }) => {
     const timePrecision = transcribe.processor.feature_extractor.config.chunk_length /
       transcribe.model.config.max_source_positions;
     const [, phrases] = transcribe.tokenizer._decode_asr(decoded, {
-      time_precision: timePrecision, return_timestamps: true
+      time_precision: timePrecision, return_timestamps: true, force_full_sequences: false
     });
     self.postMessage({
       words: (result.chunks ?? []).map(({ text, timestamp }) => ({
