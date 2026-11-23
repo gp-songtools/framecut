@@ -2262,8 +2262,7 @@ function updatePosition() {
   $('duration').textContent = formatTime(duration());
   $('play').textContent = playback ? '❚❚' : '▶';
   $('play').setAttribute('aria-label', playback ? 'Pause' : 'Play');
-  const clip = active();
-  $('split').disabled = !clip || time <= clip.at + .049 || time >= clip.at + length(clip) - .049;
+  $('split').disabled = !canSplitClip(active());
   $('effectIntensity')?.syncAtPlayhead();
   $('clipVolume')?.syncAtPlayhead();
 }
@@ -3796,9 +3795,7 @@ function renderTimeline() {
       button.append(handle);
     }
     button.onpointerdown = event => dragClip(event, clip);
-    if (animationTabs[clip.track] || clip.track === 'audio') {
-      button.oncontextmenu = event => showAnimationMenu(event, clip);
-    }
+    button.oncontextmenu = event => showTimelineClipMenu(event, clip);
     button.onclick = event => {
       if (event.detail === 0) {
         selected = clip.id;
@@ -4119,9 +4116,13 @@ async function importFiles(files, overlayAt) {
   else notify(overlayAt === undefined ? 'Media added to the timeline.' : 'Images added to the Overlay track.');
 }
 
+function canSplitClip(clip) {
+  return Boolean(clip && time > clip.at + .049 && time < clip.at + length(clip) - .049);
+}
+
 function split() {
   const clip = active();
-  if ($('split').disabled) return;
+  if (!canSplitClip(clip)) return;
   remember();
   const point = clip.start + time - clip.at;
   const right = { ...clip, id: id(), at: time, start: point };
