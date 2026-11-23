@@ -9,7 +9,7 @@ script = "\n".join((source / name).read_text(encoding="utf-8") for name in (
     "text-animations.js", "text-atmosphere.js", "animation-panel.js", "overlays.js", "subject-tracking.js",
     "body-detail-tracking.js", "body-compositing.js", "effects.js", "preset-controls.js", "timeline-range.js",
     "track-mixer.js", "audio-waveforms.js", "extracted-audio.js", "audio-fades.js", "project-files.js",
-    "lyrics.js", "editor.js"))
+    "songspec.js", "song-spec.js", "lyrics.js", "editor.js"))
 script = script.replace("/* DEMO_IMAGE */", "data:image/jpeg;base64," + image)
 font_dir = source / "fonts"
 title_fonts = loads((font_dir / "fonts.json").read_text(encoding="utf-8"))

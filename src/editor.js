@@ -4357,7 +4357,11 @@ $('media').ondrop = event => {
   if (!event.dataTransfer.files.length) return;
   event.preventDefault();
   $('media').classList.remove('drop');
-  importFiles([...event.dataTransfer.files]);
+  const files = [...event.dataTransfer.files];
+  const spec = files.find(isSongSpecFile);
+  if (spec) openFramecutSongSpec(spec);
+  const media = files.filter(file => !isSongSpecFile(file));
+  if (media.length) importFiles(media);
 };
 $('play').onclick = togglePlayback;
 $('back').onclick = () => seek(0);
@@ -4483,4 +4487,5 @@ connectBodySubjectPreview();
 connectAnimationClipboard();
 refresh();
 connectProjectFiles();
+connectFramecutSongSpec();
 connectLyricsImport();

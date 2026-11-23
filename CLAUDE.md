@@ -34,6 +34,7 @@
 - Use `extracted-audio.js` for independent audio playback and lanes. Extracted clips have `track: 'audio'` and a unique `audioTrack` lane ID.
 - Use `timelineTrack(clip)` for operations scoped to a specific lane. `track-mixer.js` combines clip volume/keyframes, the track mixer, and `audio-fades.js` gain.
 - Use `timeline-range.js` for timeline range selection and preview looping.
+- Use `song-spec.js` for read-only Song Spec input. Keep `src/songspec.js` byte-identical to the GP Song Tools canonical copy. Use timed LRC for lyric clips.
 - Use `project-files.js` for offline project files. Save a versioned JSON manifest plus original media bytes in one `.framecut` file. Stage restored media before replacing the active project.
 - Export in `renderExport()` through canvas capture and the Web Audio mix with MediaRecorder. The browser creates the output download from a blob.
 - Deploy via `.github/workflows/pages.yml`. Actions rebuilds from committed source and publishes only `_site/index.html`.
