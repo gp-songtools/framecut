@@ -2806,7 +2806,7 @@ function keyframeCurveEditor(clip, key, next, easing, { field, seekKey, onWrite 
     ctx.moveTo(x(0), y(0));ctx.lineTo(x(points[0]), y(points[1]));
     ctx.moveTo(x(1), y(1));ctx.lineTo(x(points[2]), y(points[3]));
     ctx.stroke();
-    ctx.strokeStyle = '#d0f86a';
+    ctx.strokeStyle = '#38bdf8';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(x(0), y(0));
