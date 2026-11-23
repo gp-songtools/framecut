@@ -1,1 +1,4 @@
 src/songspec.js -text
+src/whisper-model/** -text linguist-vendored
+src/whisper-model/tokenizer*.json -diff
+src/whisper-model/transformers.iife.js -diff
