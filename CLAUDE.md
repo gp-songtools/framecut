@@ -46,6 +46,8 @@
 ## Decisions and constraints
 
 - Keep the one-file offline build. Bundle dependencies, fonts, and models locally. Cloud Whisper and the browser speech service are optional, user-initiated requests.
+- The page loads the suite's Cloudflare Web Analytics beacon (`static.cloudflareinsights.com`, no cookies; privacy is covered by the suite Privacy & credits page) as an external script before `</body>` in `src/index.html`; `build.py` leaves it external. Everything else stays bundled, and the editor works offline when the beacon fails to load.
+- Follow the GP Song Tools conventions: footer links (Privacy & credits, More GP Song Tools, Source), SVG tab icon, tool colour `--fc` (dark #38BDF8, light #0369A1) as `--accent`, and a light theme through `prefers-color-scheme` with tokens in `:root` in `src/index.html`. The preview monitor stays dark in both themes. Exported video content must never use the UI accent.
 - Make editor changes in `src/`. Root `index.html` and `_site/` are generated and ignored by Git.
 - Treat `main` as a deployment branch. Preserve the existing repository files and history. Push only when the user authorizes it.
 - Keep imported media, drafts, personal test files, and credentials out of Git and the Pages artifact. The deployed app and repository are public.
