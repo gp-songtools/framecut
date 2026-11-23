@@ -75,14 +75,15 @@ function pasteClipAnimation(clip) {
   return true;
 }
 
-function showAnimationMenu(event, clip, property) {
-  const extractable = !property && canExtractAudio(clip);
-  const lyricsImportable = !property && clip.track === 'audio';
+function showTimelineClipMenu(event, clip, property) {
+  const clipActions = !property;
+  const extractable = clipActions && canExtractAudio(clip);
+  const lyricsImportable = clipActions && clip.track === 'audio';
   const copyable = Boolean(animationCopyData(clip, property));
   const pasteable = canPasteClipAnimation(clip);
   const removable = (animationTabs[clip.track] ?? []).filter(([, slot]) =>
     (!property || slot === property) && currentPreset(clip, slot));
-  if (!copyable && !pasteable && !removable.length && !extractable && !lyricsImportable) return;
+  if (!clipActions && !copyable && !pasteable && !removable.length) return;
   event.preventDefault();
   event.stopPropagation();
   animationMenuTarget = { id: clip.id, property };
@@ -92,17 +93,28 @@ function showAnimationMenu(event, clip, property) {
   $('menuPasteAnimation').disabled = !pasteable;
   const extract = $('menuExtractAudio');
   extract.hidden = !extractable;
-  extract.onclick = () => {
+  const onClip = action => () => {
     menu.hidePopover();
     const target = clips.find(item => item.id === clip.id);
-    if (target) extractAudio(target);
+    if (target) action(target);
   };
+  extract.onclick = onClip(extractAudio);
   const lyrics = $('menuImportLyrics');
   lyrics.hidden = !lyricsImportable;
-  lyrics.onclick = () => {
-    menu.hidePopover();
-    openLyricsDialog(clips.find(item => item.id === clip.id));
-  };
+  lyrics.onclick = onClip(openLyricsDialog);
+  $('menuClipActions').hidden = !clipActions;
+  $('menuSplitClip').disabled = !canSplitClip(clip);
+  const editClip = edit => onClip(target => {
+    pause();
+    selected = target.id;
+    edit();
+  });
+  $('menuSplitClip').onclick = editClip(() => {
+    if (canSplitClip(active())) split();
+    else refresh();
+  });
+  $('menuDeleteClip').onclick = editClip(() => remove());
+  $('menuRippleDeleteClip').onclick = editClip(() => remove(true));
   const deleteActions = $('menuDeleteAnimations');
   deleteActions.replaceChildren();
   for (const [label, slot] of removable) {
@@ -567,7 +579,7 @@ function animationClipBadge(clip, scale) {
   badge.title = 'Edit ' + badge.textContent;
   badge.style.left = (clip.at * scale + 4) + 'px';
   badge.style.maxWidth = Math.max(0, length(clip) * scale - 8) + 'px';
-  badge.oncontextmenu = event => showAnimationMenu(event, clip, property);
+  badge.oncontextmenu = event => showTimelineClipMenu(event, clip, property);
   badge.onclick = event => {
     event.stopPropagation();
     openTimelineAnimation(clip, property);
@@ -591,7 +603,7 @@ function animationClipSpans(clip, scale) {
     const span = document.createElement('div');
     span.className = 'clip-animation-span';
     span.dataset.animationEdge = property;
-    span.oncontextmenu = event => showAnimationMenu(event, clip, property);
+    span.oncontextmenu = event => showTimelineClipMenu(event, clip, property);
     const caption = document.createElement('button');
     caption.type = 'button';
     caption.className = 'clip-animation-label';
