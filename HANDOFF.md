@@ -33,7 +33,7 @@ My Drive/
 
 **Work order (one PR each)**
 1. **Done 2026-11-23** (toolsmenu #26 merged; song spec 1.2.0 copied to the seven tools in one PR each, all merged): toolsmenu: folder standard in `SPEC.md` (a draft is in section 8), `drive_folder` setting (Song Spec 1.2.0), `songdrive.js`, panel Save to Drive / Open from Drive; tests with a mocked Drive API; copy the libraries to all tools.
-2. Framecut: **Place clips...** on the Video sequence row of the From the song spec box, from local files first.
+2. **Done (local files), not yet merged:** Framecut: **Place clips...** on the Video sequence row of the From the song spec box, from local files first.
    - Match files to Video sequence lines by exact name, then by the `NN_` scene number. List unmatched files for confirmation.
    - Song time 0 = the selected full-song audio clip (`timeline = audio.at + (t - audio.start)`), else timeline 0.
    - Checkbox **Keep the full clips** (off by default: trim each clip to its scene length from its name or the next line).

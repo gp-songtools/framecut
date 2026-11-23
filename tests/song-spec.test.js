@@ -7,7 +7,7 @@ const test = require('node:test');
 const vm = require('node:vm');
 
 const context = vm.createContext({ location: { origin: 'null' }, Buffer, TextEncoder, TextDecoder });
-for (const file of ['songspec.js', 'song-spec.js']) {
+for (const file of ['songspec.js', 'song-spec.js', 'place-clips.js']) {
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src', file), 'utf8'), context);
 }
 const format = cues => vm.runInContext('formatTimedLyricsSection', context)(cues);
