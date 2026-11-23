@@ -27,40 +27,48 @@ function projectEditState() {
   return JSON.stringify([name, clips, ratio, trackMix, [...assets.keys()]]);
 }
 
+function buildProjectFileBlob() {
+  const state = currentProjectState();
+  const media = [];
+  const files = [];
+  const extracted = [];
+  const usedAssets = new Set(clips.map(clip => clip.asset));
+  const sourceIds = new Map([...assets].map(([key, value]) => [value, key]));
+  const addFile = (id, kind, file) => {
+    if (!file) throw Error('A media file is missing from the project.');
+    media.push({ id, kind, name: file.name, type: file.type, size: file.size });
+    files.push(file);
+  };
+  for (const [key, asset] of assets) {
+    if (key === 'demo') continue;
+    if (!asset.sourceVideo) addFile(key, 'asset', asset.file);
+    else if (usedAssets.has(key)) {
+      extracted.push({ id: key, source: sourceIds.get(asset.sourceVideo), trackNumber: asset.trackNumber });
+    }
+  }
+  const backgrounds = new Set(clips.map(clip => clip.background?.image).filter(Boolean));
+  for (const key of backgrounds) addFile(key, 'background', backgroundImages.get(key)?.file);
+
+  const manifest = new TextEncoder().encode(JSON.stringify({ version: projectVersion, state, media, extracted }));
+  if (manifest.length > maxProjectManifestBytes) throw Error('The project has too many timeline settings to save.');
+  // Keep the media as blobs so large sources do not get encoded into JSON.
+  const header = new Uint8Array(projectHeaderBytes);
+  header.set(new TextEncoder().encode(projectSignature));
+  new DataView(header.buffer).setUint32(projectSignature.length, manifest.length, true);
+  return {
+    blob: new Blob([header, manifest, ...files], { type: 'application/octet-stream' }),
+    name: (state.name.trim().replace(/[\\/:*?"<>|]/g, '-') || 'Framecut') + '.framecut'
+  };
+}
+
 function saveProjectFile() {
   if (openingProject || exporting) return;
   try {
-    const state = currentProjectState();
-    const media = [];
-    const files = [];
-    const extracted = [];
-    const usedAssets = new Set(clips.map(clip => clip.asset));
-    const sourceIds = new Map([...assets].map(([key, value]) => [value, key]));
-    const addFile = (id, kind, file) => {
-      if (!file) throw Error('A media file is missing from the project.');
-      media.push({ id, kind, name: file.name, type: file.type, size: file.size });
-      files.push(file);
-    };
-    for (const [key, asset] of assets) {
-      if (key === 'demo') continue;
-      if (!asset.sourceVideo) addFile(key, 'asset', asset.file);
-      else if (usedAssets.has(key)) {
-        extracted.push({ id: key, source: sourceIds.get(asset.sourceVideo), trackNumber: asset.trackNumber });
-      }
-    }
-    const backgrounds = new Set(clips.map(clip => clip.background?.image).filter(Boolean));
-    for (const key of backgrounds) addFile(key, 'background', backgroundImages.get(key)?.file);
-
-    const manifest = new TextEncoder().encode(JSON.stringify({ version: projectVersion, state, media, extracted }));
-    if (manifest.length > maxProjectManifestBytes) throw Error('The project has too many timeline settings to save.');
-    // Keep the media as blobs so large sources do not get encoded into JSON.
-    const header = new Uint8Array(projectHeaderBytes);
-    header.set(new TextEncoder().encode(projectSignature));
-    new DataView(header.buffer).setUint32(projectSignature.length, manifest.length, true);
-    const url = URL.createObjectURL(new Blob([header, manifest, ...files], { type: 'application/octet-stream' }));
+    const { blob, name } = buildProjectFileBlob();
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = (state.name.trim().replace(/[\\/:*?"<>|]/g, '-') || 'Framecut') + '.framecut';
+    link.download = name;
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 30000);
     savedProjectState = projectEditState();

@@ -4347,12 +4347,15 @@ async function renderExport() {
       return;
     }
     if (!parts.length) throw Error('The browser returned an empty recording.');
-    const url = URL.createObjectURL(new Blob(parts, { type: mimeType.split(';')[0] }));
+    const exportBlob = new Blob(parts, { type: mimeType.split(';')[0] });
+    const exportName = ($('project').value.trim().replace(/[\\/:*?"<>|]/g, '-') || 'Framecut') + '.' + extension;
+    const url = URL.createObjectURL(exportBlob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = ($('project').value.trim().replace(/[\\/:*?"<>|]/g, '-') || 'Framecut') + '.' + extension;
+    link.download = exportName;
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 30000);
+    rememberLastExport(exportBlob, exportName, exportBlob.type);
     $('dialog').close();
     notify('Export complete. Check your browser downloads.');
   } catch (error) {
@@ -4491,7 +4494,30 @@ $('export').onclick = () => {
   $('exportText').textContent = 'Render the timeline to a downloadable video. Keep this tab open during export.';
   $('dialog').showModal();
 };
-$('render').onclick = renderExport;
+$('render').onclick = async () => {
+  const toDrive = $('exportToDrive').checked;
+  let signing;
+  if (toDrive && typeof SongDrive !== 'undefined') {
+    // Google's sign-in popup has to open from this click, before the render starts.
+    $('render').disabled = true;
+    signing = SongDrive.signIn();
+    try {
+      await signing;
+    } catch (error) {
+      $('exportText').textContent = driveError(error);
+      $('render').disabled = false;
+      return;
+    }
+    if (!$('dialog').open) {
+      $('render').disabled = false;
+      return;
+    }
+  }
+  const before = lastExport;
+  await renderExport();
+  $('render').disabled = false;
+  if (toDrive && lastExport && lastExport !== before) await saveExportToDriveAfterExport(lastExport);
+};
 $('cancel').onclick = () => {
   if (exporting) exporting.cancel = true;
   else $('dialog').close();
@@ -4536,4 +4562,5 @@ refresh();
 connectProjectFiles();
 connectFramecutSongSpec();
 connectPlaceClips();
+connectFramecutDrive();
 connectLyricsImport();

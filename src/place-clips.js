@@ -93,6 +93,15 @@ function planPlacement(scenes, byScene, options = {}) {
   return plan;
 }
 
+// Drive files may report application/octet-stream for a video; fall back to the extension.
+function driveVideoType(name, type) {
+  const given = String(type || '').toLowerCase();
+  if (given.startsWith('video/')) return given;
+  if (given && given !== 'application/octet-stream') return '';
+  const kinds = { mp4: 'video/mp4', m4v: 'video/mp4', mov: 'video/quicktime', webm: 'video/webm', mkv: 'video/x-matroska' };
+  return kinds[(/\.([A-Za-z0-9]+)$/.exec(String(name)) || [])[1]?.toLowerCase()] || '';
+}
+
 // UI
 
 let placeState = null;
@@ -124,13 +133,15 @@ function openPlaceFilePicker() {
   $('placeFiles').click();
 }
 
-function startPlaceClips(fileList) {
+// fileList holds File objects, or lazy Drive entries {name, size, type, driveId} that are downloaded when Place is clicked.
+function startPlaceClips(fileList, options = {}) {
   const spec = activeFramecutSongSpec();
   const stats = {};
   const scenes = parseVideoSequence(spec?.video, stats);
   const files = [...fileList].sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
   if (!files.length) return;
-  placeState = { scenes, files, stats, match: matchSceneFiles(scenes, files), zero: placeSongZero(), busy: false, done: false };
+  placeState = { scenes, files, stats, match: matchSceneFiles(scenes, files), zero: placeSongZero(), busy: false, done: false,
+    source: options.source || 'local', folderLabel: options.folderLabel || '' };
   renderPlaceDialog();
   const dialog = $('placeDialog');
   if (!dialog.open) dialog.showModal();
@@ -140,6 +151,8 @@ function renderPlaceDialog() {
   const state = placeState;
   const { scenes, files, match } = state;
   $('placeZero').textContent = state.zero.text;
+  $('placeSource').hidden = state.source !== 'drive';
+  $('placeSource').textContent = state.source === 'drive' ? 'Clips from Google Drive: ' + state.folderLabel + '. Only the matched files are downloaded.' : '';
   const list = $('placeScenes');
   list.replaceChildren();
   scenes.forEach((scene, i) => {
@@ -188,12 +201,35 @@ async function runPlaceClips() {
   const loaded = new Map();
   const durations = [];
   const wanted = [...new Set(match.byScene.filter(index => index >= 0))];
+  // Google's sign-in popup must open from this click, so start it before any other await.
+  let signInError;
+  if (wanted.some(index => files[index].driveId)) {
+    try { await SongDrive.signIn(); } catch (error) { signInError = error; }
+  }
   for (const [n, index] of wanted.entries()) {
+    let file = files[index];
+    if (file.driveId) {
+      notify('Downloading ' + (n + 1) + ' of ' + wanted.length + ': ' + file.name + '…');
+      try {
+        if (signInError) throw signInError;
+        const type = driveVideoType(file.name, file.type);
+        if (!type) throw Error('not a video file');
+        const blob = await SongDrive.download(file.driveId);
+        file = new File([blob], file.name, { type: driveVideoType(file.name, blob.type) || type });
+      } catch (error) {
+        if (revision !== projectRevision) {
+          $('placeDialog').close();
+          return;
+        }
+        notPlaced.push(files[index].name + ': failed to download (' + driveError(error) + ')');
+        continue;
+      }
+    }
     notify('Loading clips… ' + (n + 1) + ' of ' + wanted.length);
     try {
-      if (!files[index].type.startsWith('video/')) throw Error('not a video file');
+      if (!file.type.startsWith('video/')) throw Error('not a video file');
       const assetId = id();
-      const asset = await loadMediaAsset(files[index], assetId);
+      const asset = await loadMediaAsset(file, assetId);
       if (revision !== projectRevision) {
         releaseMediaAsset(asset);
         state.busy = false;
