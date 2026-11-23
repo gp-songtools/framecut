@@ -45,7 +45,7 @@ My Drive/
 6. Last: Lyricpad migration from its flat `Lyricpad/` Drive folder to each song's `lyrics/`, offering a one-time move of existing songs.
 7. Later: GP Mastering (`gp-songtools/gp-master`) adopts the song spec (it has no copy of `songspec.js` yet, and `check-copies.js` does not list it), then saves masters into each song's `audio/` folder with `songdrive.js`. Randomash is in the same position for its generated clips.
 
-**Testing:** Drive is mocked in browser tests, because the build sandbox can't sign in to Google. The owner tries the first real sign-in and upload.
+**Testing:** Drive is mocked in browser tests, because the build sandbox can't sign in to Google. Real Drive confirmed by the owner on 2026-11-23 in Earprint (Drive turned on there first): sign-in, Save to Drive (resumable upload) and Open from Drive all work.
 
 ## Earlier work (2026-11-23)
 
