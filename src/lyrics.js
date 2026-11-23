@@ -5,6 +5,7 @@ let lyricsFileRevision = 0;
 let activeLyricTranscription;
 const lyricsHandoffKey = 'gpsongtools.framecut.lyrics.v1';
 const lyricsHandoffLifetime = 24 * 60 * 60 * 1000;
+const lyricCloudKeyPrefix = 'gpsongtools.framecut.whisper-key.v1.';
 let pendingLyricsHandoff;
 let lyricsHandoffInDialog;
 
@@ -104,7 +105,7 @@ function syncLyricEngine() {
   let detail = 'Uses the bundled Whisper model. Audio stays on this device.';
   if (cloud) {
     const { label } = lyricCloudProviders[$('lyricsCloudProvider').value];
-    detail = 'Sends the selected clip’s audio to ' + label + '. The API key is cleared when you close this window.';
+    detail = 'Sends the selected clip’s audio to ' + label + '. Keys are temporary unless you choose to remember them.';
   } else if (method === 'live') {
     detail = align ? 'Alignment uses the bundled Whisper model for word timing.'
       : 'Listens to the clip in real time. Your browser’s speech service may process the audio online.';
@@ -113,9 +114,40 @@ function syncLyricEngine() {
     ? ' Keeps the lyric lines in the editor.' : ' Generates a new draft from the audio.');
 }
 
+function currentLyricCloudStorageKey() {
+  return lyricCloudKeyPrefix + $('lyricsCloudProvider').value;
+}
+
+function loadLyricCloudKey() {
+  let saved = '';
+  try { saved = localStorage.getItem(currentLyricCloudStorageKey()) ?? ''; } catch { /* Browser storage is optional. */ }
+  $('lyricsCloudKey').value = saved;
+  $('rememberLyricsCloudKey').checked = Boolean(saved);
+  $('forgetLyricsCloudKey').hidden = !saved;
+  $('lyricsKeyStatus').textContent = '';
+}
+
+function updateLyricCloudKey() {
+  const remember = $('rememberLyricsCloudKey');
+  const forget = $('forgetLyricsCloudKey');
+  const status = $('lyricsKeyStatus');
+  const saved = remember.checked ? $('lyricsCloudKey').value.trim() : '';
+  try {
+    if (saved) localStorage.setItem(currentLyricCloudStorageKey(), saved);
+    else localStorage.removeItem(currentLyricCloudStorageKey());
+    forget.hidden = !saved;
+    status.textContent = '';
+    return true;
+  } catch {
+    remember.checked = !forget.hidden;
+    status.textContent = saved ? 'Could not save this API key in the browser.' : 'Could not remove the saved API key from this browser.';
+    return false;
+  }
+}
+
 function setLyricTranscriptionBusy(busy) {
   for (const name of ['lyricsEngine', 'alignLyrics', 'lyricsCloudProvider', 'lyricsCloudKey',
-    'transcribeLyrics', 'chooseLyricsFile', 'useSongSpecLyrics', 'applyLyrics']) {
+    'rememberLyricsCloudKey', 'forgetLyricsCloudKey', 'transcribeLyrics', 'chooseLyricsFile', 'useSongSpecLyrics', 'applyLyrics']) {
     $(name).disabled = busy;
   }
   $('lyricsText').readOnly = busy;
@@ -174,22 +206,24 @@ async function runLyricTranscription() {
     const firstSample = samples.findIndex(sample => Math.abs(sample) > .0001);
     if (firstSample < 0) throw Error('The selected part of the clip is silent.');
     const firstSignal = firstSample / lyricSampleRate;
-    let words;
+    let result;
     if (method === 'cloud') {
       setStatus('Transcribing with ' + lyricCloudProviders[provider].label + ' Whisper…');
-      words = await transcribeLyricsInCloud(samples, provider, key, signal);
+      result = await transcribeLyricsInCloud(samples, provider, key, signal);
     } else if (method === 'live') {
       setStatus('Listening to the audio clip in real time…');
-      words = await transcribeLyricsLive(samples, context, signal);
+      result = await transcribeLyricsLive(samples, context, signal);
     } else {
       setStatus('Loading the bundled Whisper model…');
-      words = await transcribeLyricsOnDevice(samples, signal, setStatus);
+      result = await transcribeLyricsOnDevice(samples, signal, setStatus);
     }
     signal.throwIfAborted();
     if (!clips.includes(clip) || clip.start !== start || clip.end !== end) {
       throw Error('The audio trim changed. Run transcription again for the current clip.');
     }
-    const timed = normalizeLyricWords(words, duration, firstSignal);
+    const { words, segments } = result;
+    const timed = normalizeLyricWords(words?.length ? words : wordsFromLyricSegments(segments),
+      duration, firstSignal, segments);
     if (!timed.length) throw Error('No timed speech or singing was detected in the selected clip.');
     const alignment = align ? alignWrittenLyrics(lines, timed, duration, firstSignal) : null;
     if (align && !alignment) throw Error('Whisper could not match your lyrics to this audio. Check the selected clip and lyrics.');
@@ -233,6 +267,7 @@ function openLyricsDialog(audio) {
   $('lyricsMessage').textContent = '';
   $('applyLyrics').disabled = false;
   $('alignLyrics').checked = false;
+  loadLyricCloudKey();
   syncLyricEngine();
   $('lyricsDialog').showModal();
 }
@@ -246,16 +281,33 @@ function connectLyricsImport() {
   syncLyricsHandoff();
   window.addEventListener('storage', event => {
     if (!event.key || event.key === lyricsHandoffKey) syncLyricsHandoff();
+    if (dialog.open && (!event.key || event.key === currentLyricCloudStorageKey())) loadLyricCloudKey();
   });
   $('dismissLyricsHandoff').onclick = () => clearLyricsHandoff(pendingLyricsHandoff);
   $('timelineImportLyrics').onclick = () => openLyricsDialog(active());
-  for (const name of ['lyricsEngine', 'alignLyrics', 'lyricsCloudProvider']) $(name).onchange = syncLyricEngine;
+  for (const name of ['lyricsEngine', 'alignLyrics']) $(name).onchange = syncLyricEngine;
+  $('lyricsCloudProvider').onchange = () => {
+    loadLyricCloudKey();
+    syncLyricEngine();
+  };
+  $('rememberLyricsCloudKey').onchange = updateLyricCloudKey;
+  $('lyricsCloudKey').onchange = () => {
+    if ($('rememberLyricsCloudKey').checked) updateLyricCloudKey();
+  };
+  $('forgetLyricsCloudKey').onclick = () => {
+    $('rememberLyricsCloudKey').checked = false;
+    $('lyricsCloudKey').value = '';
+    if (updateLyricCloudKey()) $('lyricsKeyStatus').textContent = 'Saved API key removed.';
+    $('lyricsCloudKey').focus();
+  };
   $('transcribeLyrics').onclick = runLyricTranscription;
   $('stopLyricsTranscription').onclick = () => activeLyricTranscription?.abort();
   dialog.addEventListener('close', () => {
     activeLyricTranscription?.abort();
     activeLyricTranscription = null;
     $('lyricsCloudKey').value = '';
+    $('rememberLyricsCloudKey').checked = false;
+    $('forgetLyricsCloudKey').hidden = true;
     setLyricTranscriptionBusy(false);
   });
   $('useSongSpecLyrics').onclick = () => {
