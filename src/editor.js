@@ -2351,6 +2351,7 @@ function renderFrame(position, running = false, preciseSeek = false) {
   if (!matteOnly) {
     if (visibleAsset) drawTimelineEffects(context, position, visual, visibleAsset.media);
     for (const clip of overlays) drawOverlay(context, clip, clip.start + position - clip.at);
+    drawAudioVisualizers(context, position);
   }
   for (const [index, clip] of titles.entries()) {
     drawTitleLayer(context, clip, position, index);
@@ -3508,6 +3509,7 @@ function inspector() {
     section.append(scalarKeyframeField(clip, volumeKeyframes));
   }
   if (canFadeAudio(clip)) appendAudioFadeInspector(clip, panel);
+  if (clip.track === 'audio') appendVisualizerInspector(clip, panel);
   if (clip.track === 'visual') {
     const heading = document.createElement('h3');
     heading.className = 'section';
@@ -4127,6 +4129,7 @@ function split() {
   const point = clip.start + time - clip.at;
   const right = { ...clip, id: id(), at: time, start: point };
   if (clip.background) right.background = { ...clip.background };
+  if (clip.visualizer) right.visualizer = { ...clip.visualizer };
   if (clip.audioFadeIn || clip.audioFadeOut) {
     const { audioFadeIn, audioFadeOut } = audioFadeDurations(clip);
     clip.audioFadeIn = audioFadeIn;

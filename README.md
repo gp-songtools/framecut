@@ -17,3 +17,11 @@ breaks while Whisper estimates timestamps. Review the timestamps and choose
 - **Live Browser Listener** processes the clip in real time through the browser's
   speech service in Chrome 142 or later. With alignment enabled, it uses the
   bundled Whisper model for word timing.
+
+## Audio visualizers
+
+Select an audio clip and choose a **Visualizer** preset in the Inspector. The 13
+presets, palettes and beat bands come from AuraLyrics Studio. Adjust the palette,
+the band it reacts to, reactivity, glow, opacity, size and position, or add a
+palette backdrop. The visualizer follows the clip's source audio through playback,
+scrubbing, trims, splits and export, and it is saved with the project.
