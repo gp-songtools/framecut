@@ -2,6 +2,7 @@
 
 let lyricsAudioClip;
 let lyricsFileRevision = 0;
+let activeLyricTranscription;
 const lyricsHandoffKey = 'gpsongtools.framecut.lyrics.v1';
 const lyricsHandoffLifetime = 24 * 60 * 60 * 1000;
 let pendingLyricsHandoff;
@@ -95,6 +96,124 @@ function createLyricsClips(cues, audio) {
   return titles;
 }
 
+function syncLyricEngine() {
+  const method = $('lyricsEngine').value;
+  const align = $('alignLyrics').checked;
+  const cloud = method === 'cloud';
+  $('lyricsCloudOptions').hidden = !cloud;
+  let detail = 'Uses the bundled Whisper model. Audio stays on this device.';
+  if (cloud) {
+    const { label } = lyricCloudProviders[$('lyricsCloudProvider').value];
+    detail = 'Sends the selected clip’s audio to ' + label + '. The API key is cleared when you close this window.';
+  } else if (method === 'live') {
+    detail = align ? 'Alignment uses the bundled Whisper model for word timing.'
+      : 'Listens to the clip in real time. Your browser’s speech service may process the audio online.';
+  }
+  $('lyricsEngineInfo').textContent = detail + (align
+    ? ' Keeps the lyric lines in the editor.' : ' Generates a new draft from the audio.');
+}
+
+function setLyricTranscriptionBusy(busy) {
+  for (const name of ['lyricsEngine', 'alignLyrics', 'lyricsCloudProvider', 'lyricsCloudKey',
+    'transcribeLyrics', 'chooseLyricsFile', 'useSongSpecLyrics', 'applyLyrics']) {
+    $(name).disabled = busy;
+  }
+  $('lyricsText').readOnly = busy;
+  $('stopLyricsTranscription').hidden = !busy;
+}
+
+async function runLyricTranscription() {
+  if (activeLyricTranscription) return;
+  const clip = lyricsAudioClip;
+  const asset = assets.get(clip?.asset);
+  const text = $('lyricsText');
+  const message = $('lyricsMessage');
+  if (!asset || !clips.includes(clip)) {
+    message.textContent = 'Reopen Import Lyrics from the audio clip you want to use.';
+    return;
+  }
+  const { start, end } = clip;
+  const duration = end - start;
+  const selectedMethod = $('lyricsEngine').value;
+  const align = $('alignLyrics').checked;
+  const method = selectedMethod === 'live' && align ? 'local' : selectedMethod;
+  const lines = align ? lyricAlignmentLines(text.value) : [];
+  const provider = $('lyricsCloudProvider').value;
+  const key = method === 'cloud' ? $('lyricsCloudKey').value.trim() : '';
+  if (align && !lines.length) {
+    message.textContent = 'Paste or open the lyrics you want to align.';
+    return;
+  }
+  if (method === 'cloud' && !key) {
+    message.textContent = 'Enter your ' + lyricCloudProviders[provider].label + ' API key.';
+    return;
+  }
+  if (method === 'cloud' && Math.round(duration * lyricSampleRate) * 2 + 44 > lyricCloudLimit) {
+    message.textContent = 'Cloud Whisper accepts up to 25 MB of audio. Trim the clip to about 13 minutes or use In-browser Whisper.';
+    return;
+  }
+  const job = new AbortController();
+  activeLyricTranscription = job;
+  const { signal } = job;
+  const setStatus = status => {
+    if (activeLyricTranscription === job && !signal.aborted) message.textContent = status;
+  };
+  lyricsFileRevision++;
+  setLyricTranscriptionBusy(true);
+  let context;
+  try {
+    if (method === 'live') {
+      lyricLiveRecognition();
+      context = new AudioContext();
+      await context.resume();
+    }
+    setStatus('Preparing the selected audio clip…');
+    const samples = await decodeLyricClip(asset, { start, end }, signal);
+    signal.throwIfAborted();
+    // Whisper can timestamp the first word at zero even if the clip starts with silence.
+    const firstSample = samples.findIndex(sample => Math.abs(sample) > .0001);
+    if (firstSample < 0) throw Error('The selected part of the clip is silent.');
+    const firstSignal = firstSample / lyricSampleRate;
+    let words;
+    if (method === 'cloud') {
+      setStatus('Transcribing with ' + lyricCloudProviders[provider].label + ' Whisper…');
+      words = await transcribeLyricsInCloud(samples, provider, key, signal);
+    } else if (method === 'live') {
+      setStatus('Listening to the audio clip in real time…');
+      words = await transcribeLyricsLive(samples, context, signal);
+    } else {
+      setStatus('Loading the bundled Whisper model…');
+      words = await transcribeLyricsOnDevice(samples, signal, setStatus);
+    }
+    signal.throwIfAborted();
+    if (!clips.includes(clip) || clip.start !== start || clip.end !== end) {
+      throw Error('The audio trim changed. Run transcription again for the current clip.');
+    }
+    const timed = normalizeLyricWords(words, duration, firstSignal);
+    if (!timed.length) throw Error('No timed speech or singing was detected in the selected clip.');
+    const alignment = align ? alignWrittenLyrics(lines, timed, duration, firstSignal) : null;
+    if (align && !alignment) throw Error('Whisper could not match your lyrics to this audio. Check the selected clip and lyrics.');
+    const cues = alignment?.cues ?? groupLyricWords(timed);
+    text.value = formatTranscribedLrc(cues, start, end);
+    lyricsHandoffInDialog = null;
+    $('lyricsTextLabel').textContent = 'Timed lyrics';
+    if (!align) $('lyricsSongSpecHint').hidden = true;
+    const matched = alignment && alignment.matched < cues.length
+      ? ' Estimated timing for ' + (cues.length - alignment.matched) + ' unmatched lines.' : '';
+    setStatus((align ? 'Aligned ' : 'Transcribed ') + cues.length + ' lyric ' +
+      (cues.length === 1 ? 'line.' : 'lines.') + matched + ' Review the timestamps, then choose Import Lyrics.');
+  } catch (error) {
+    setStatus(error.message);
+  } finally {
+    if (context) void context.close().catch(() => {});
+    if (activeLyricTranscription === job) {
+      activeLyricTranscription = null;
+      setLyricTranscriptionBusy(false);
+      if (signal.aborted) message.textContent = 'Transcription canceled.';
+    }
+  }
+}
+
 function openLyricsDialog(audio) {
   if (audio?.track !== 'audio' || openingProject || exporting) return;
   pause();
@@ -107,12 +226,14 @@ function openLyricsDialog(audio) {
   lyricsHandoffInDialog = pendingLyricsHandoff;
   lyricsFileRevision++;
   $('lyricsAudio').textContent = 'Sync to ' + assets.get(audio.asset).name;
-  $('lyricsTextLabel').textContent = lyricsHandoffInDialog ? 'Timed lyrics from Auralyrics' : 'Paste timed LRC from Auralyrics';
+  $('lyricsTextLabel').textContent = lyricsHandoffInDialog ? 'Timed lyrics from Auralyrics' : 'Lyrics or timed LRC';
   $('lyricsText').value = lyricsHandoffInDialog?.lrc ?? '';
   $('lyricsSongSpecHint').hidden = true;
   $('lyricsFile').value = '';
   $('lyricsMessage').textContent = '';
   $('applyLyrics').disabled = false;
+  $('alignLyrics').checked = false;
+  syncLyricEngine();
   $('lyricsDialog').showModal();
 }
 
@@ -128,6 +249,15 @@ function connectLyricsImport() {
   });
   $('dismissLyricsHandoff').onclick = () => clearLyricsHandoff(pendingLyricsHandoff);
   $('timelineImportLyrics').onclick = () => openLyricsDialog(active());
+  for (const name of ['lyricsEngine', 'alignLyrics', 'lyricsCloudProvider']) $(name).onchange = syncLyricEngine;
+  $('transcribeLyrics').onclick = runLyricTranscription;
+  $('stopLyricsTranscription').onclick = () => activeLyricTranscription?.abort();
+  dialog.addEventListener('close', () => {
+    activeLyricTranscription?.abort();
+    activeLyricTranscription = null;
+    $('lyricsCloudKey').value = '';
+    setLyricTranscriptionBusy(false);
+  });
   $('useSongSpecLyrics').onclick = () => {
     const spec = activeFramecutSongSpec();
     if (!spec?.lyrics) return;
@@ -141,6 +271,8 @@ function connectLyricsImport() {
     $('lyricsSongSpecAttribution').textContent = 'Using Lyrics from Song Spec' +
       (spec.lyricsBy ? ' (' + spec.lyricsBy + ')' : '') + '.';
     $('lyricsSongSpecHint').hidden = false;
+    $('alignLyrics').checked = true;
+    syncLyricEngine();
     message.textContent = '';
   };
   $('chooseLyricsFile').onclick = () => input.click();
@@ -148,6 +280,7 @@ function connectLyricsImport() {
   text.oninput = () => {
     lyricsFileRevision++;
     apply.disabled = false;
+    $('transcribeLyrics').disabled = false;
     message.textContent = '';
   };
   input.onchange = async () => {
@@ -156,23 +289,28 @@ function connectLyricsImport() {
     if (!file) return;
     const revision = ++lyricsFileRevision;
     apply.disabled = true;
+    $('transcribeLyrics').disabled = true;
     message.textContent = '';
     try {
       const contents = await file.text();
       if (dialog.open && revision === lyricsFileRevision) {
         lyricsHandoffInDialog = null;
-        $('lyricsTextLabel').textContent = 'Paste timed LRC from Auralyrics';
+        $('lyricsTextLabel').textContent = 'Lyrics or timed LRC';
         $('lyricsSongSpecHint').hidden = true;
         text.value = contents;
       }
     } catch {
-      if (dialog.open && revision === lyricsFileRevision) message.textContent = 'Could not read this LRC file.';
+      if (dialog.open && revision === lyricsFileRevision) message.textContent = 'Could not read this lyrics file.';
     } finally {
-      if (revision === lyricsFileRevision) apply.disabled = false;
+      if (revision === lyricsFileRevision) {
+        apply.disabled = false;
+        $('transcribeLyrics').disabled = false;
+      }
     }
   };
   $('lyricsForm').onsubmit = event => {
     event.preventDefault();
+    if (activeLyricTranscription) return;
     const audio = lyricsAudioClip;
     if (!clips.includes(audio)) {
       message.textContent = 'Reopen Import Lyrics from the audio clip you want to use.';
@@ -180,7 +318,7 @@ function connectLyricsImport() {
     }
     const { cues, untimed } = parseLrc(text.value);
     if (!cues.some(cue => cue.text)) {
-      message.textContent = 'Enter timed lyrics such as [00:04.50] Your first lyric.';
+      message.textContent = 'Enter timed lyrics such as [00:04.50] Your first lyric, or select Transcribe.';
       return;
     }
     const titles = createLyricsClips(cues, audio);

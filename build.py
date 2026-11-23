@@ -1,4 +1,5 @@
 from base64 import b64encode
+from gzip import compress
 from pathlib import Path
 from json import dumps, loads
 
@@ -9,7 +10,7 @@ script = "\n".join((source / name).read_text(encoding="utf-8") for name in (
     "text-animations.js", "text-atmosphere.js", "animation-panel.js", "overlays.js", "subject-tracking.js",
     "body-detail-tracking.js", "body-compositing.js", "effects.js", "preset-controls.js", "timeline-range.js",
     "track-mixer.js", "audio-waveforms.js", "extracted-audio.js", "audio-fades.js", "project-files.js",
-    "songspec.js", "song-spec.js", "lyrics.js", "editor.js"))
+    "songspec.js", "song-spec.js", "lyrics-timing.js", "lyric-transcription.js", "lyrics.js", "editor.js"))
 script = script.replace("/* DEMO_IMAGE */", "data:image/jpeg;base64," + image)
 font_dir = source / "fonts"
 title_fonts = loads((font_dir / "fonts.json").read_text(encoding="utf-8"))
@@ -28,8 +29,11 @@ manifest = loads(graph)["weightsManifest"]
 weights = b"".join((vendor / path).read_bytes() for group in manifest for path in group["paths"])
 portrait = b64encode((vendor / "portrait.jpg").read_bytes()).decode("ascii")
 script = script.replace("/* SUBJECT_PREVIEW */", "data:image/jpeg;base64," + portrait)
-def bundle_bytes(element_id, filename, directory=vendor):
-    data = b64encode((directory / filename).read_bytes()).decode("ascii")
+def bundle_bytes(element_id, filename, directory=vendor, gzip=False):
+    data = (directory / filename).read_bytes()
+    if gzip:
+        data = compress(data, compresslevel=6, mtime=0)
+    data = b64encode(data).decode("ascii")
     return f'<script type="text/plain" id="{element_id}">{data}</script>'
 
 
@@ -50,6 +54,17 @@ vision_notices = "\n\n".join((vision_vendor / filename).read_text(encoding="utf-
 media_reader = source / "media-reader"
 media_reader_notices = "\n\n".join((media_reader / filename).read_text(encoding="utf-8")
                                   for filename in ("NOTICE.md", "LICENSE"))
+whisper_vendor = source / "whisper-model"
+whisper_files = {
+    filename: f"whisperAsset{index}" for index, filename in enumerate((
+        "transformers.iife.js", "ort-wasm-simd.wasm", "ort-wasm.wasm",
+        "config.json", "generation_config.json", "preprocessor_config.json", "tokenizer.json",
+        "tokenizer_config.json", "onnx/encoder_model_quantized.onnx", "onnx/decoder_model_merged_quantized.onnx",
+    ))
+}
+whisper_notices = "\n\n".join((whisper_vendor / filename).read_text(encoding="utf-8") for filename in (
+    "NOTICE.md", "TRANSFORMERS-LICENSE", "ONNX-RUNTIME-LICENSE", "ONNX-RUNTIME-NOTICES", "WHISPER-LICENSE"
+))
 bundle = "\n".join((
     bundle_bytes("personRuntime", "tf.min.js"),
     bundle_bytes("personWasmRuntime", "tf-backend-wasm.min.js"),
@@ -61,6 +76,10 @@ bundle = "\n".join((
     f'<script type="text/plain" id="bodyVisionNotices">{vision_notices}</script>',
     bundle_bytes("videoAudioReader", "mediabunny.min.mjs", media_reader),
     f'<script type="text/plain" id="videoAudioReaderNotices">{media_reader_notices}</script>',
+    bundle_bytes("whisperWorker", "whisper-worker.js", source),
+    f'<script type="application/json" id="whisperFiles">{dumps(whisper_files)}</script>',
+    *(bundle_bytes(element_id, filename, whisper_vendor, gzip=True) for filename, element_id in whisper_files.items()),
+    f'<script type="text/plain" id="whisperNotices">{whisper_notices}</script>',
     f'<script>{model_code}</script>',
 ))
 page = (source / "index.html").read_text(encoding="utf-8").replace("<!-- PERSON_MODEL_BUNDLE -->", bundle)

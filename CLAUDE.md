@@ -12,6 +12,7 @@
 - Open the generated page in Chrome with `& 'C:\Program Files\Google\Chrome\Application\chrome.exe' (Resolve-Path .\index.html).Path` in PowerShell.
 - For a served check, run `py -m http.server 8765 --bind 127.0.0.1` and open `http://127.0.0.1:8765/` in Chrome.
 - Syntax-check changed JavaScript with `node --check src/editor.js`, substituting each changed file. There is no checked-in lint or test runner.
+  Run `node --test tests/lyrics-timing.test.js` for lyric alignment regressions.
 - Test the edited flow in desktop Chrome using generated media. For rendering changes, check preview and an actual export. Inspect the streams with `ffprobe -v error -show_entries stream=codec_type,codec_name -of compact output.webm`.
 - On an authorized release, run `git push origin main`. Confirm `origin` is `https://github.com/gp-songtools/framecut.git` first.
 - Dispatch the existing workflow with `gh workflow run pages.yml --repo gp-songtools/framecut --ref main` when an authorized redeploy is needed.
@@ -35,13 +36,14 @@
 - Use `timelineTrack(clip)` for operations scoped to a specific lane. `track-mixer.js` combines clip volume/keyframes, the track mixer, and `audio-fades.js` gain.
 - Use `timeline-range.js` for timeline range selection and preview looping.
 - Use `song-spec.js` for read-only Song Spec input. Keep `src/songspec.js` byte-identical to the GP Song Tools canonical copy. Use timed LRC for lyric clips.
+- Use `lyrics-timing.js` for word alignment and attach timings in source time. Use `lyric-transcription.js` for audio from the selected trim and transcription providers.
 - Use `project-files.js` for offline project files. Save a versioned JSON manifest plus original media bytes in one `.framecut` file. Stage restored media before replacing the active project.
 - Export in `renderExport()` through canvas capture and the Web Audio mix with MediaRecorder. The browser creates the output download from a blob.
 - Deploy via `.github/workflows/pages.yml`. Actions rebuilds from committed source and publishes only `_site/index.html`.
 
 ## Decisions and constraints
 
-- Keep the one-file offline build. Bundle dependencies, fonts, and models locally. Avoid adding runtime CDN, API, server, or account requirements.
+- Keep the one-file offline build. Bundle dependencies, fonts, and models locally. Cloud Whisper and the browser speech service are optional, user-initiated requests.
 - Make editor changes in `src/`. Root `index.html` and `_site/` are generated and ignored by Git.
 - Treat `main` as a deployment branch. Preserve the existing repository files and history. Push only when the user authorizes it.
 - Keep imported media, drafts, personal test files, and credentials out of Git and the Pages artifact. The deployed app and repository are public.
@@ -59,7 +61,7 @@
 ## Known gotchas
 
 - A Pages project lives under `/framecut/`. Keep it working from that subpath, `file://`, and normal static hosting.
-- The HTML is roughly 36 MB raw. Use Git and Actions for deployment. Keep the generated copy out of commit history.
+- Use Git and Actions to deploy the large single-file build. Keep the generated copy out of commit history.
 - The person model uses single-threaded WASM with CPU fallback. Face and hand models load from bundled blobs. The current build works without cross-origin isolation.
 - MediaRecorder codec support varies by browser. Keep the supported-format checks, retain the transparent VP8 WebM path, and use Chrome as the verified baseline.
 - Export records in real time. Keep the tab open during export. Check actual encoded alpha over a contrasting background when changing the mask pipeline.
