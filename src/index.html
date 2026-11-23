@@ -52,13 +52,31 @@
 #lyricsHandoff{justify-content:space-between;padding:7px 14px;background:#223741;color:#c8eafa;border-bottom:1px solid var(--line)}
 #lyricsHandoff[hidden]{display:none}
 #lyricsHandoffStatus{overflow-wrap:anywhere}
-#songSpecPanel .row{flex-wrap:wrap}
-#songSpecPanel p,#lyricsSongSpecHint{overflow-wrap:anywhere}
-#songSpecDetails{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 8px}
-#songSpecDetails[hidden],#songSpecError:empty,#songSpecLyricsStatus:empty{display:none}
-#songSpecDetails dt{color:var(--muted)}
-#songSpecDetails dd{margin:0;overflow-wrap:anywhere}
-#songSpecError{color:#ffd1a0}
+#lyricsSongSpecHint{overflow-wrap:anywhere}
+.spec-panel .ssp{margin:0;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-size:12px;color:var(--ink)}
+.spec-panel .ssp summary{overflow-wrap:anywhere}
+.spec-panel .ssp p{margin:6px 0;color:var(--muted);opacity:1;overflow-wrap:anywhere}
+.spec-panel .ssp button,.spec-in button{min-height:30px;padding:4px 8px;background:#222429;border:1px solid var(--line);border-radius:7px;color:var(--ink);font:inherit}
+.spec-panel .ssp button:hover,.spec-in button:hover:not(:disabled){background:#2b2e34}
+.spec-panel .ssp-row{margin:6px 0}
+.spec-panel .ssp li{gap:4px 8px}
+.spec-panel .ssp .ssp-h{min-width:0;flex:1 1 100%}
+.spec-panel .ssp .ssp-m{min-width:0;flex:1 1 100%;color:var(--muted);opacity:1;overflow-wrap:anywhere}
+.spec-panel .ssp li>button{margin-left:auto}
+.spec-panel .ssp-w{color:#ffd1a0}.spec-panel .ssp-e{color:#ff9a9a}
+.spec-in{margin-top:8px;padding:6px 8px;border:1px solid var(--line);border-radius:8px}
+.spec-in[hidden]{display:none}
+.spec-in h3{margin:0 0 4px;font-size:12px}
+.spec-in p{margin:4px 0;overflow-wrap:anywhere}
+.spec-in dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 8px;margin:6px 0}
+.spec-in dt{color:var(--muted)}
+.spec-in dd{margin:0;overflow-wrap:anywhere}
+.spec-row{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin:6px 0;overflow-wrap:anywhere}
+.spec-row>span{flex:1 1 100%;min-width:0}
+.spec-in button:disabled{opacity:.5;cursor:not-allowed}
+.spec-note{color:var(--muted)}
+.spec-stale{color:#ffd1a0}
+.spec-used{color:var(--lime)}
 .clip.audio-clip>span{position:absolute;top:2px;left:4px;max-width:calc(100% - 8px);padding:1px 4px;line-height:12px;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
 .clip.overlay-clip{background:#594026;border-color:#9a7245;height:34px}
 .lane[data-track=effect]{position:relative}
@@ -208,17 +226,9 @@
 <header><div class="brand"><div class="mark" aria-hidden="true">◩</div>Framecut Studio</div><input class="project" id="project" aria-label="Project name" value="Above the Clouds"><div class="header-right"><button id="new" title="New project">New</button><button id="openProject">Open Project</button><button id="saveProject">Save Project</button><button class="accent" id="export">Export ↗</button><input id="projectFile" type="file" accept=".framecut" hidden></div></header>
 <main class="workspace">
 <aside class="panel media" id="media"><div class="row between"><h2 class="title">Media</h2><span id="assetCount" class="secondary"></span></div><button id="import">＋ Import media</button><input id="file" type="file" accept="video/*,image/*,audio/*" multiple hidden><div class="bin" id="bin"></div>
-<section class="section" id="songSpecPanel" aria-labelledby="songSpecHeading">
-  <h2 class="title" id="songSpecHeading">Song Spec</h2>
-  <div class="row">
-    <button id="openSongSpec" type="button">Open Song Spec</button>
-    <button id="useSharedSongSpec" type="button" hidden>Use Shared Song Spec</button>
-    <input id="songSpecFile" type="file" accept=".songspec.md,.md" hidden>
-  </div>
-  <p class="secondary" id="songSpecStatus" role="status"></p>
-  <dl id="songSpecDetails" hidden></dl>
-  <p class="secondary" id="songSpecLyricsStatus"></p>
-  <p id="songSpecError" role="status"></p>
+<section class="section" id="songSpecPanel" aria-label="Song spec">
+  <div id="songSpecMount" class="spec-panel"></div>
+  <div id="songSpecFrom" class="spec-in" hidden></div>
 </section>
 <section class="section" aria-labelledby="overlayHeading"><h2 class="title" id="overlayHeading">Stickers &amp; overlays</h2>
 <button id="importOverlay">＋ Import image overlay</button><input id="overlayFile" type="file" accept="image/*" multiple hidden>
@@ -269,6 +279,7 @@
     <h2 id="lyricsHeading">Import Lyrics</h2>
     <p id="lyricsAudio" class="secondary"></p>
     <button id="useSongSpecLyrics" type="button" hidden>Use Song Spec Lyrics</button>
+    <button id="useSongSpecTimedLyrics" type="button" hidden title="Times are song time; use the full song audio clip.">Use Song Spec Timed Lyrics</button>
     <button id="saveTimedLyrics" type="button" disabled title="Times are taken from the lyrics box. Use the full song audio so they match song time.">Save Timed Lyrics to Song Spec</button>
     <p id="lyricsSongSpecHint" class="secondary" hidden><span id="lyricsSongSpecAttribution"></span></p>
     <label id="lyricsTextLabel" for="lyricsText">Lyrics or timed LRC</label>
