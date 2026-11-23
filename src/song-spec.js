@@ -1,8 +1,12 @@
 'use strict';
 
-let sharedFramecutSongSpec;
-let openedFramecutSongSpec;
-let songSpecFileRevision = 0;
+let framecutSongSpecPanel;
+let songSpecAudioSelected;
+
+function syncFramecutSongSpecSelection(clip) {
+  const audio = clip?.track === 'audio';
+  if (audio !== songSpecAudioSelected) renderFramecutSongSpec();
+}
 
 function readFramecutSongSpec(text) {
   if (typeof text !== 'string' || !text.trim()) return null;
@@ -14,6 +18,7 @@ function readFramecutSongSpec(text) {
   };
   const lyrics = SongSpec.section(doc, 'lyrics');
   const timed = SongSpec.section(doc, 'timed-lyrics');
+  const video = SongSpec.section(doc, 'video-sequence');
   return {
     title: SongSpec.setting(doc, 'title'),
     bpm: numericSetting('bpm'),
@@ -22,59 +27,145 @@ function readFramecutSongSpec(text) {
     lyrics: SongSpec.stripTags(lyrics?.body),
     lyricsBy: lyrics?.by ? SongSpec.toolName(lyrics.by) : '',
     timedLyrics: timed?.body ?? '',
-    timedLyricsBy: timed?.by ? SongSpec.toolName(timed.by) : ''
+    timedLyricsBy: timed?.by ? SongSpec.toolName(timed.by) : '',
+    video: video?.body ?? '',
+    videoBy: video?.by ? SongSpec.toolName(video.by) : '',
+    stale: SongSpec.summary(doc)
+      .filter(row => row.present && ['lyrics', 'timed-lyrics', 'video-sequence'].includes(row.id))
+      .flatMap(row => row.stale)
   };
 }
 
 function activeFramecutSongSpec() {
-  return openedFramecutSongSpec?.data ?? sharedFramecutSongSpec;
+  return readFramecutSongSpec(SongSpec.store.load());
+}
+
+function songSpecLineCount(body) {
+  return String(body || '').split('\n').filter(line => line.trim()).length;
+}
+
+function songSpecLinesLabel(count) {
+  return count + (count === 1 ? ' line' : ' lines');
+}
+
+function songSpecTimeRange(body) {
+  const stamps = [...String(body).matchAll(/^\s*\[(\d+:\d{2}(?:\.\d+)?)\]/gm)].map(match => match[1]);
+  return stamps.length ? stamps[0] + '–' + stamps[stamps.length - 1] : '';
+}
+
+function songSpecInDialog(spec) {
+  if (!spec || !$('lyricsDialog').open) return '';
+  const value = $('lyricsText').value.trim();
+  if (!value) return '';
+  if (spec.timedLyrics && value === spec.timedLyrics.trim()) return 'Timed lyrics (' + (spec.timedLyricsBy || 'Song Spec') + ')';
+  if (spec.lyrics && value === spec.lyrics.trim()) return 'Lyrics (' + (spec.lyricsBy || 'Song Spec') + ')';
+  return '';
 }
 
 function renderFramecutSongSpec() {
+  const box = $('songSpecFrom');
+  if (!box) return;
   const spec = activeFramecutSongSpec();
-  $('songSpecStatus').textContent = openedFramecutSongSpec ? openedFramecutSongSpec.name
-    : spec ? 'Shared Song Spec in this browser' : 'Open or drop a .songspec.md file here.';
-  $('useSharedSongSpec').hidden = !openedFramecutSongSpec || !sharedFramecutSongSpec;
-  const details = $('songSpecDetails');
-  details.replaceChildren();
-  const fields = spec ? [
+  const audio = active()?.track === 'audio';
+  songSpecAudioSelected = audio;
+  const dialogOpen = $('lyricsDialog').open;
+  const inUse = songSpecInDialog(spec);
+  $('useSongSpecLyrics').hidden = !spec?.lyrics;
+  $('useSongSpecTimedLyrics').hidden = !spec?.timedLyrics;
+  box.replaceChildren();
+  if (!spec) {
+    box.hidden = true;
+    return;
+  }
+  const make = (tag, text, className) => {
+    const node = document.createElement(tag);
+    if (text != null) node.textContent = text;
+    if (className) node.className = className;
+    return node;
+  };
+  const fields = [
     ['Title', spec.title], ['BPM', spec.bpm], ['Key', spec.key],
     ['Duration', spec.duration && spec.duration + ' s']
-  ].filter(([, value]) => value) : [];
-  for (const [label, value] of fields) {
-    const term = document.createElement('dt');
-    const description = document.createElement('dd');
-    term.textContent = label;
-    description.textContent = value;
-    details.append(term, description);
+  ].filter(([, value]) => value);
+  const details = make('dl');
+  for (const [label, value] of fields) details.append(make('dt', label), make('dd', value));
+  const rows = [];
+  const useRow = (text, title, use, used) => {
+    const row = make('div', null, 'spec-row');
+    row.append(make('span', text));
+    if (title) row.title = title;
+    if (used) row.append(make('b', 'In use', 'spec-used'));
+    else {
+      const button = make('button', 'Use in Import Lyrics');
+      button.type = 'button';
+      button.disabled = !audio && !dialogOpen;
+      if (button.disabled) button.title = 'Select an audio clip first';
+      button.onclick = use;
+      row.append(button);
+      if (button.disabled) row.append(make('small', 'Select an audio clip, then use these lyrics.', 'spec-note'));
+    }
+    return row;
+  };
+  const lyricsLines = songSpecLineCount(spec.lyrics);
+  if (lyricsLines) {
+    rows.push(useRow('Lyrics from ' + (spec.lyricsBy || 'the song spec') + ': ' + songSpecLinesLabel(lyricsLines) +
+      ' ([tags] removed).', '', () => useSongSpecInImportLyrics('lyrics'), inUse.startsWith('Lyrics')));
   }
-  details.hidden = !fields.length;
-  const timedLines = spec?.timedLyrics ? spec.timedLyrics.split('\n').filter(line => line.trim()).length : 0;
-  const timedStatus = timedLines
-    ? ' Timed lyrics: ' + timedLines + (timedLines === 1 ? ' line' : ' lines') +
-      (spec.timedLyricsBy ? ' by ' + spec.timedLyricsBy : '') + '.' : '';
-  $('songSpecLyricsStatus').textContent = spec
-    ? (spec.lyrics ? 'Lyrics available' + (spec.lyricsBy ? ' from ' + spec.lyricsBy : '') +
-      '. Select an Audio clip and choose Import Lyrics.' : 'This Song Spec has no lyrics.') + timedStatus
-    : '';
-  $('useSongSpecLyrics').hidden = !spec?.lyrics;
+  const timedLines = songSpecLineCount(spec.timedLyrics);
+  if (timedLines) {
+    const range = songSpecTimeRange(spec.timedLyrics);
+    rows.push(useRow('Timed lyrics from ' + (spec.timedLyricsBy || 'the song spec') + ': ' + songSpecLinesLabel(timedLines) +
+      (range ? ', ' + range : '') + '.', 'Times are song time; use the full song audio clip.',
+    () => useSongSpecInImportLyrics('timed'), inUse.startsWith('Timed')));
+  }
+  const videoLines = songSpecLineCount(spec.video);
+  if (videoLines) {
+    const row = make('div', null, 'spec-row');
+    row.append(make('span', 'Video sequence from ' + (spec.videoBy || 'the song spec') + ': ' + videoLines +
+      (videoLines === 1 ? ' clip.' : ' clips.')), make('small', 'Placing clips on the timeline is coming in Phase 2.', 'spec-note'));
+    rows.push(row);
+  }
+  for (const note of spec.stale) rows.push(make('p', note, 'spec-stale'));
+  if (inUse) rows.push(make('p', 'Import Lyrics is using from the song spec: ' + inUse, 'spec-used'));
+  if (!fields.length && !rows.length) {
+    box.hidden = true;
+    return;
+  }
+  box.append(make('h3', 'From the song spec'),
+    make('p', 'Optional: use any of these, or import your own.', 'secondary'));
+  if (fields.length) box.append(details);
+  box.append(...rows);
+  box.hidden = false;
 }
 
-async function openFramecutSongSpec(file) {
-  const revision = ++songSpecFileRevision;
-  $('songSpecError').textContent = '';
+function useSongSpecInImportLyrics(kind) {
+  if (!$('lyricsDialog').open) {
+    const audio = active();
+    if (audio?.track !== 'audio') return;
+    openLyricsDialog(audio);
+    if (!$('lyricsDialog').open) return;
+  }
+  if (kind === 'timed') useSongSpecTimedLyricsInDialog();
+  else useSongSpecLyricsInDialog();
+  renderFramecutSongSpec();
+}
+
+async function dropFramecutSongSpec(file) {
+  const say = (text, kind) => framecutSongSpecPanel?.say(text, kind);
   try {
     const text = await file.text();
-    const data = readFramecutSongSpec(text);
-    if (revision !== songSpecFileRevision) return;
-    if (!data) {
-      $('songSpecError').textContent = 'Choose a Song Spec file with schema_version: 1.';
+    const current = SongSpec.store.load();
+    const present = current && SongSpec.summary(SongSpec.parse(current)).some(row => row.present);
+    if (present && !confirm('Replace the song spec in this browser with ' + file.name + '?')) return;
+    if (!SongSpec.store.save(text)) {
+      say('This browser blocked saving the song spec (private mode or storage full).', 'ssp-e');
       return;
     }
-    openedFramecutSongSpec = { name: file.name, text, data };
-    renderFramecutSongSpec();
+    const errors = SongSpec.validate(SongSpec.parse(text)).filter(issue => issue.level === 'error');
+    say(errors.length ? 'Opened ' + file.name + '. ' + errors.length + ' problem(s): ' + errors.map(issue => issue.message).join(' ')
+      : 'Opened ' + file.name + '.', errors.length ? 'ssp-w' : '');
   } catch {
-    if (revision === songSpecFileRevision) $('songSpecError').textContent = 'Could not read this Song Spec file.';
+    say('Could not read this song spec file.', 'ssp-e');
   }
 }
 
@@ -106,40 +197,30 @@ function saveTimedLyricsToSongSpec(cues) {
     message.textContent = 'There are no timed lyric lines to save.';
     return;
   }
-  const write = doc => {
-    const reason = SongSpec.confirmReason(doc, 'timed-lyrics', 'framecut');
-    if (reason && !confirm(reason + ' Overwrite the Timed lyrics section?')) return false;
-    SongSpec.setSection(doc, 'timed-lyrics', body, {
-      by: 'framecut', from: SongSpec.section(doc, 'lyrics') ? ['lyrics'] : []
-    });
-    return true;
-  };
+  let cancelled = false;
   try {
-    if (openedFramecutSongSpec?.text) {
-      const doc = SongSpec.parse(openedFramecutSongSpec.text);
-      if (!write(doc)) return;
-      const text = SongSpec.serialize(doc);
-      const name = openedFramecutSongSpec.name || SongSpec.fileName(doc);
-      openedFramecutSongSpec = { name: openedFramecutSongSpec.name, text, data: readFramecutSongSpec(text) };
-      SongSpec.download(text, name);
-      message.textContent = 'Downloaded ' + name + ' with timed lyrics.';
-    } else if (location.origin === 'https://gp-songtools.github.io' && SongSpec.store.load()) {
-      let saved = true;
-      SongSpec.store.update(doc => { saved = write(doc); });
-      if (!saved) return;
-      message.textContent = 'Saved timed lyrics to the shared Song Spec.';
+    const doc = SongSpec.store.update(target => {
+      const reason = SongSpec.confirmReason(target, 'timed-lyrics', 'framecut');
+      if (reason && !confirm(reason + ' Overwrite the Timed lyrics section?')) {
+        cancelled = true;
+        return;
+      }
+      SongSpec.setSection(target, 'timed-lyrics', body, {
+        by: 'framecut', from: SongSpec.section(target, 'lyrics') ? ['lyrics'] : []
+      });
+    });
+    if (cancelled) return;
+    const text = SongSpec.serialize(doc);
+    if (SongSpec.store.load() === text) {
+      message.textContent = 'Saved timed lyrics to the song spec. Use Download in the Song spec panel to keep a file.';
     } else {
-      const doc = SongSpec.parse(SongSpec.create());
-      write(doc);
       const name = SongSpec.fileName(doc);
-      SongSpec.download(SongSpec.serialize(doc), name);
-      message.textContent = 'Downloaded ' + name + ' with timed lyrics.';
+      SongSpec.download(text, name);
+      message.textContent = 'This browser blocked saving, so ' + name + ' was downloaded with timed lyrics.';
     }
   } catch (error) {
     message.textContent = 'Could not save timed lyrics: ' + (error?.message || 'unknown error');
-    return;
   }
-  renderFramecutSongSpec();
 }
 
 function isSongSpecFile(file) {
@@ -147,27 +228,7 @@ function isSongSpecFile(file) {
 }
 
 function connectFramecutSongSpec() {
-  const input = $('songSpecFile');
-  $('openSongSpec').onclick = () => input.click();
-  input.onchange = () => {
-    const file = input.files[0];
-    input.value = '';
-    if (file) openFramecutSongSpec(file);
-  };
-  $('useSharedSongSpec').onclick = () => {
-    songSpecFileRevision++;
-    openedFramecutSongSpec = null;
-    $('songSpecError').textContent = '';
-    renderFramecutSongSpec();
-  };
-  if (location.origin === 'https://gp-songtools.github.io') {
-    const receive = text => {
-      sharedFramecutSongSpec = readFramecutSongSpec(text);
-      renderFramecutSongSpec();
-    };
-    SongSpec.store.onChange(receive);
-    receive(SongSpec.store.load());
-  } else {
-    renderFramecutSongSpec();
-  }
+  framecutSongSpecPanel = SongSpec.mountPanel($('songSpecMount'), { onChange: renderFramecutSongSpec });
+  SongSpec.store.onChange(renderFramecutSongSpec);
+  renderFramecutSongSpec();
 }

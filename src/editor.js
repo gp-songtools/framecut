@@ -3921,6 +3921,7 @@ function refresh() {
   const lyrics = $('timelineImportLyrics');
   lyrics.disabled = clip?.track !== 'audio';
   lyrics.title = lyrics.disabled ? 'Select an audio clip first' : 'Import timed lyrics for this audio clip';
+  syncFramecutSongSpecSelection(clip);
   renderTimeline();
   inspector();
   draw(Boolean(playback));
@@ -4405,7 +4406,7 @@ $('media').ondrop = event => {
   $('media').classList.remove('drop');
   const files = [...event.dataTransfer.files];
   const spec = files.find(isSongSpecFile);
-  if (spec) openFramecutSongSpec(spec);
+  if (spec) dropFramecutSongSpec(spec);
   const media = files.filter(file => !isSongSpecFile(file));
   if (media.length) importFiles(media);
 };

@@ -151,7 +151,7 @@ function syncSaveTimedLyrics() {
 
 function setLyricTranscriptionBusy(busy) {
   for (const name of ['lyricsEngine', 'alignLyrics', 'lyricsCloudProvider', 'lyricsCloudKey',
-    'rememberLyricsCloudKey', 'forgetLyricsCloudKey', 'transcribeLyrics', 'chooseLyricsFile', 'useSongSpecLyrics', 'applyLyrics']) {
+    'rememberLyricsCloudKey', 'forgetLyricsCloudKey', 'transcribeLyrics', 'chooseLyricsFile', 'useSongSpecLyrics', 'useSongSpecTimedLyrics', 'applyLyrics']) {
     $(name).disabled = busy;
   }
   $('lyricsText').readOnly = busy;
@@ -257,6 +257,39 @@ async function runLyricTranscription() {
   }
 }
 
+function useSongSpecTextInDialog(body, label, attribution, align, confirmText) {
+  const text = $('lyricsText');
+  if (text.value.trim() && text.value !== body && !confirm(confirmText)) return;
+  lyricsFileRevision++;
+  $('applyLyrics').disabled = false;
+  lyricsHandoffInDialog = null;
+  text.value = body;
+  $('lyricsTextLabel').textContent = label;
+  $('lyricsSongSpecAttribution').textContent = attribution;
+  $('lyricsSongSpecHint').hidden = false;
+  $('alignLyrics').checked = align;
+  syncLyricEngine();
+  syncSaveTimedLyrics();
+  $('lyricsMessage').textContent = '';
+  renderFramecutSongSpec();
+}
+
+function useSongSpecLyricsInDialog() {
+  const spec = activeFramecutSongSpec();
+  if (!spec?.lyrics) return;
+  useSongSpecTextInDialog(spec.lyrics, 'Lyrics from Song Spec',
+    'Using Lyrics from Song Spec' + (spec.lyricsBy ? ' (' + spec.lyricsBy + ')' : '') + '.', true,
+    'Replace the lyrics in the import box with the Song Spec lyrics?');
+}
+
+function useSongSpecTimedLyricsInDialog() {
+  const spec = activeFramecutSongSpec();
+  if (!spec?.timedLyrics) return;
+  useSongSpecTextInDialog(spec.timedLyrics, 'Timed lyrics from Song Spec',
+    'Using Timed lyrics from Song Spec' + (spec.timedLyricsBy ? ' (' + spec.timedLyricsBy + ')' : '') + '.', false,
+    'Replace the lyrics in the import box with the Song Spec timed lyrics?');
+}
+
 function openLyricsDialog(audio) {
   if (audio?.track !== 'audio' || openingProject || exporting) return;
   pause();
@@ -280,6 +313,7 @@ function openLyricsDialog(audio) {
   syncLyricEngine();
   syncSaveTimedLyrics();
   $('lyricsDialog').showModal();
+  renderFramecutSongSpec();
 }
 
 function connectLyricsImport() {
@@ -319,25 +353,10 @@ function connectLyricsImport() {
     $('rememberLyricsCloudKey').checked = false;
     $('forgetLyricsCloudKey').hidden = true;
     setLyricTranscriptionBusy(false);
+    renderFramecutSongSpec();
   });
-  $('useSongSpecLyrics').onclick = () => {
-    const spec = activeFramecutSongSpec();
-    if (!spec?.lyrics) return;
-    if (text.value.trim() && text.value !== spec.lyrics &&
-        !confirm('Replace the lyrics in the import box with the Song Spec lyrics?')) return;
-    lyricsFileRevision++;
-    apply.disabled = false;
-    lyricsHandoffInDialog = null;
-    text.value = spec.lyrics;
-    $('lyricsTextLabel').textContent = 'Lyrics from Song Spec';
-    $('lyricsSongSpecAttribution').textContent = 'Using Lyrics from Song Spec' +
-      (spec.lyricsBy ? ' (' + spec.lyricsBy + ')' : '') + '.';
-    $('lyricsSongSpecHint').hidden = false;
-    $('alignLyrics').checked = true;
-    syncLyricEngine();
-    syncSaveTimedLyrics();
-    message.textContent = '';
-  };
+  $('useSongSpecLyrics').onclick = useSongSpecLyricsInDialog;
+  $('useSongSpecTimedLyrics').onclick = useSongSpecTimedLyricsInDialog;
   $('saveTimedLyrics').onclick = () => saveTimedLyricsToSongSpec(parseLrc(text.value).cues);
   $('chooseLyricsFile').onclick = () => input.click();
   $('cancelLyrics').onclick = () => dialog.close();
@@ -347,6 +366,7 @@ function connectLyricsImport() {
     $('transcribeLyrics').disabled = false;
     message.textContent = '';
     syncSaveTimedLyrics();
+    renderFramecutSongSpec();
   };
   input.onchange = async () => {
     const file = input.files[0];
