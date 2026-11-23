@@ -1,12 +1,54 @@
 # Framecut handoff: Claude session, 2026-11-23
 
-## Song Spec work (2026-11-23)
+## Phase 2 plan: GP Song Tools Drive folder and placing clips (decided 2026-11-23, not started)
+
+The owner answered all questions on 2026-11-23. Wait for the owner to start it.
 
 **Phase 1 (done):** the "Save Timed Lyrics to Song Spec" button in the lyrics dialog writes the Timed lyrics section, and "Use Song Spec Lyrics" fills the lyrics box from the spec's Lyrics section. `src/songspec.js` is the v1.1.0 copy of the GP Song Tools library, and `tests/song-spec.test.js` covers it. GP Producer writes Video sequence and reads Timed lyrics.
 
-**Phase 2 (TO DO, not started):** retrieve the produced video clips from the Google Drive folder GP Producer saves them to, and place them on the timeline in order using the spec's Video sequence section. Wait for the user's go-ahead before starting.
+**Standard Google Drive folder for every GP Song Tools app, one per song:**
 
-Repo: `gp-songtools/framecut`. `origin/main` is at `4b56b78` (merge of #17). All of this work is merged and deployed to GitHub Pages. No Claude PRs are open and there are no uncommitted changes.
+```
+My Drive/
+  GP Song Tools/
+    <Song title>/
+      <song>.songspec.md   the song spec (cross-device copy)
+      lyrics/              Lyricpad (.txt), LRC exports
+      audio/               masters (GP Mastering), generated clips (Randomash), stems
+      images/              GP Producer anchors and keyframes, cover art
+      clips/               GP Producer video clips, named by file tag (01_Intro_00-12.mp4)
+      exports/             finished videos (Framecut, AuraLyrics Studio)
+      projects/            app project files (.framecut, GP Producer .zip)
+```
+
+**Rules**
+- The folder is named from the spec `title`, with characters Drive can't take removed. Untitled songs ask for a title first.
+- New spec setting `drive_folder` = the folder's Drive ID (survives renames). Any tool may fill it, only while empty. This is Song Spec 1.2.0, additive, schema 1.
+- The `.songspec.md` in the folder is the cross-device copy. The shared Song spec panel gets **Save to Drive** and **Open from Drive**. The browser copy stays the working copy.
+- Each tool writes only its own subfolders. All tools may read all.
+- One Google client for every tool: reuse Lyricpad's Google Cloud project (client ID in lyricpad `js/config.js`, starts `514325867394-`), scope `drive.file` only (non-sensitive).
+- New shared library `songdrive.js` in toolsmenu next to `songspec.js`, with byte-identical copies in the tools, checked by `check-copies.js`. It covers sign-in (Google Identity Services token client, loaded on click only), find/create the song folder and subfolders, resumable upload for video, list, download, and Save/Open the spec.
+
+**Google setup (done by the owner, 2026-11-23):** consent screen renamed "GP Song Tools" (no verification needed), Drive API enabled, app in Production, authorized origin `https://gp-songtools.github.io` covers every tool. A Google Picker API key is needed only if a tool must open files our apps didn't create. If that happens, ask the owner through the secure credential form, never in chat.
+
+**Work order (one PR each)**
+1. toolsmenu: folder standard in `SPEC.md` (a draft is in section 8), `drive_folder` setting (Song Spec 1.2.0), `songdrive.js`, panel Save to Drive / Open from Drive; tests with a mocked Drive API; copy the libraries to all tools.
+2. Framecut: **Place clips...** on the Video sequence row of the From the song spec box, from local files first.
+   - Match files to Video sequence lines by exact name, then by the `NN_` scene number. List unmatched files for confirmation.
+   - Song time 0 = the selected full-song audio clip (`timeline = audio.at + (t - audio.start)`), else timeline 0.
+   - Checkbox **Keep the full clips** (off by default: trim each clip to its scene length from its name or the next line).
+   - Checkbox **Replace existing clips** (off by default: when on, a scene that already has a clip gets the new one; scenes without a clip get theirs added in both cases).
+   - List missing clips. One undo step. Respect the magnet.
+3. GP Producer: **Add clip files...** (match to scenes by file tag; tick Downloaded and File tag applied), **Save clips to Drive** into `clips/` (anchors and keyframes into `images/`), project .zip into `projects/`. The CSP must allow Google sign-in and Drive hosts.
+4. Framecut: Google Drive as a second source for Place clips (reads `clips/`); **Save export to Drive** into `exports/`; project files into `projects/`.
+5. Docs: About hand-off from "coming next" to shipped; Privacy Google Drive entries for each tool; User Guides.
+6. Last: Lyricpad migration from its flat `Lyricpad/` Drive folder to each song's `lyrics/`, offering a one-time move of existing songs.
+
+**Testing:** Drive is mocked in browser tests, because the build sandbox can't sign in to Google. The owner tries the first real sign-in and upload.
+
+## Earlier work (2026-11-23)
+
+Repo: `gp-songtools/framecut`. All of this work is merged and deployed to GitHub Pages (see `git log` for the current head). No Claude PRs are open and there are no uncommitted changes.
 
 Read `CLAUDE.md` on `origin/main` first. Since #16, it requires the subagent workflow for every task:
 1. `haiku-helper` explores, searches, and checks git state.
