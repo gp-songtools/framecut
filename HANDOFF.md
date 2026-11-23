@@ -32,7 +32,7 @@ My Drive/
 **Google setup (done by the owner, 2026-11-23):** consent screen renamed "GP Song Tools" (no verification needed), Drive API enabled, app in Production, authorized origin `https://gp-songtools.github.io` covers every tool. A Google Picker API key is needed only if a tool must open files our apps didn't create. If that happens, ask the owner through the secure credential form, never in chat.
 
 **Work order (one PR each)**
-1. **Done 2026-11-23** (toolsmenu #26 merged; song spec 1.2.0 copied to the seven tools in one PR each, open for the owner to merge): toolsmenu: folder standard in `SPEC.md` (a draft is in section 8), `drive_folder` setting (Song Spec 1.2.0), `songdrive.js`, panel Save to Drive / Open from Drive; tests with a mocked Drive API; copy the libraries to all tools.
+1. **Done 2026-11-23** (toolsmenu #26 merged; song spec 1.2.0 copied to the seven tools in one PR each, all merged): toolsmenu: folder standard in `SPEC.md` (a draft is in section 8), `drive_folder` setting (Song Spec 1.2.0), `songdrive.js`, panel Save to Drive / Open from Drive; tests with a mocked Drive API; copy the libraries to all tools.
 2. Framecut: **Place clips...** on the Video sequence row of the From the song spec box, from local files first.
    - Match files to Video sequence lines by exact name, then by the `NN_` scene number. List unmatched files for confirmation.
    - Song time 0 = the selected full-song audio clip (`timeline = audio.at + (t - audio.start)`), else timeline 0.
