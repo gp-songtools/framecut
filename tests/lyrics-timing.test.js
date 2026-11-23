@@ -148,3 +148,27 @@ test('moves an opening line stretched or squeezed before a pause to the vocals',
   assert.equal(splitUpOpening(squeezed, 7.2).time, 7.2);
   assert.equal(splitUpOpening(squeezed, 'null').time, .025);
 });
+
+test('finds the vocal onset just before a stretched run despite a loud intro hit', () => {
+  // Groq's real response for Split Up: vocals begin at 7.2 s, after a loud hit at 0.3 s.
+  const words = [['This', 0, 5.02], ['October.', 5.02, 7.48], ['One', 10.92, 11.2], ['cabin.', 11.2, 12.04],
+    ['Five', 13.94, 14.54], ['friends.', 14.54, 15.44], ['Zero', 17.02, 17.86], ['survival', 17.86, 19.32],
+    ['instincts.', 19.32, 20.48], ['They', 33.16, 33.26], ['found', 33.26, 33.64], ['it', 33.64, 33.82]]
+    .map(([word, start, end]) => ({ word, start, end }));
+  const result = run(`(() => {
+    const rate = 1000, samples = new Float32Array(40 * rate);
+    for (let i = 0; i < samples.length; i++) {
+      const t = i / rate;
+      const hit = t >= .3 && t < 1 ? .45 : 0;
+      const voice = [7.2, 10.92, 13.94, 17.02, 33.16].some(at => t >= at && t < at + 1.2) ? .4 : 0;
+      samples[i] = Math.sin(i * 1.3) * (.003 + hit + voice);
+    }
+    const audio = { onset: detectLyricOnset(samples, rate), envelope: lyricLevelEnvelope(samples, rate) };
+    return { onset: audio.onset, cue: groupLyricWords(normalizeLyricWords(${JSON.stringify(words)}, 40, .025, [], audio))[0] };
+  })()`);
+  assert.ok(result.onset < 1, 'the whole-clip onset trips on the intro hit: ' + result.onset);
+  assert.equal(result.cue.text, 'This October.');
+  assert.ok(Math.abs(result.cue.time - 7.2) <= .03, String(result.cue.time));
+  // Without the level envelope, the run falls back to its typical word length.
+  assert.ok(Math.abs(run('normalizeLyricWords(' + JSON.stringify(words) + ', 40, .025)[0].start') - 6.28) < 1e-9);
+});

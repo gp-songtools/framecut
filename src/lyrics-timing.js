@@ -28,7 +28,8 @@ function wordsFromLyricSegments(segments) {
   });
 }
 
-function normalizeLyricWords(words, duration, firstSignal, segments = [], audioOnset = null) {
+// `audio` is the clip's level onset in seconds, or { onset, envelope } from the selected clip.
+function normalizeLyricWords(words, duration, firstSignal, segments = [], audio = null) {
   const timed = words.filter(item => typeof item.word === 'string' && item.word.trim() &&
     Number.isFinite(item.start) && item.start < duration)
     .map(item => {
@@ -56,7 +57,7 @@ function normalizeLyricWords(words, duration, firstSignal, segments = [], audioO
     }
   }
 
-  repairOpeningLyricWords(timed, firstSignal, audioOnset, segments);
+  repairOpeningLyricWords(timed, firstSignal, audio, segments);
   return timed;
 }
 
@@ -65,7 +66,8 @@ function normalizeLyricWords(words, duration, firstSignal, segments = [], audioO
 // the whole line in at zero. Find the trustworthy end of that opening run (a stretched word's end,
 // the next word after a gap, or the end of the phrase Whisper reported), then place the run just
 // before it and refine with the audio's level onset when it agrees.
-function repairOpeningLyricWords(timed, firstSignal, audioOnset, segments = []) {
+function repairOpeningLyricWords(timed, firstSignal, audio, segments = []) {
+  const audioOnset = typeof audio === 'number' ? audio : audio?.onset;
   if (timed.length < 2 || timed[0].start > .15) return;
   const normal = word => word.end - word.start >= .06 && word.end - word.start <= 1.2;
   const durations = timed.slice(0, 12).filter(normal).map(word => word.end - word.start).sort((a, b) => a - b);
@@ -101,7 +103,10 @@ function repairOpeningLyricWords(timed, firstSignal, audioOnset, segments = []) 
   }
   if (end === null || end - timed[0].start <= Math.max(2.5, typical * 2 * count)) return;
   let start = Math.max(firstSignal, end - count * typical);
-  if (knownOnset !== null && knownOnset >= start - 1.5 && knownOnset < end - .06 * count) start = knownOnset;
+  const localOnset = audio?.envelope ? lyricOnsetBefore(audio.envelope, end) : null;
+  if (localOnset !== null && localOnset >= end - Math.max(4, count * typical * 4) && localOnset < end - .06 * count) {
+    start = Math.max(firstSignal, localOnset);
+  } else if (knownOnset !== null && knownOnset >= start - 1.5 && knownOnset < end - .06 * count) start = knownOnset;
   const step = (end - start) / count;
   run.forEach((word, i) => {
     word.start = start + i * step;
@@ -109,30 +114,61 @@ function repairOpeningLyricWords(timed, firstSignal, audioOnset, segments = []) 
   });
 }
 
-// Returns when the clip first reaches a sustained level near its loud passages (in seconds).
-function detectLyricOnset(samples, sampleRate) {
+// Smoothed energy per 10 ms frame, kept so the samples can be transferred to a worker.
+function lyricLevelEnvelope(samples, sampleRate) {
   const frame = Math.max(1, Math.round(sampleRate * .01));
   const count = Math.floor(samples.length / frame);
-  if (count < 20) return null;
+  const window = 10;
   const levels = new Float32Array(count);
+  let total = 0;
+  const energy = new Float32Array(count);
   for (let f = 0; f < count; f++) {
     let sum = 0;
     for (let i = f * frame, to = i + frame; i < to; i++) sum += samples[i] * samples[i];
-    levels[f] = sum / frame;
+    energy[f] = sum / frame;
+    total += energy[f] - (f >= window ? energy[f - window] : 0);
+    levels[f] = total / Math.min(f + 1, window);
   }
-  const window = 10;
-  const smooth = new Float32Array(count);
-  let total = 0;
-  for (let f = 0; f < count; f++) {
-    total += levels[f] - (f >= window ? levels[f - window] : 0);
-    smooth[f] = total / Math.min(f + 1, window);
-  }
-  const loud = Float32Array.from(smooth).sort()[Math.floor(count * .95)];
+  return { levels, seconds: frame / sampleRate };
+}
+
+// Returns when the clip first reaches a sustained level near its loud passages (in seconds).
+function detectLyricOnset(samples, sampleRate) {
+  const { levels, seconds } = lyricLevelEnvelope(samples, sampleRate);
+  const count = levels.length;
+  if (count < 20) return null;
+  const loud = Float32Array.from(levels).sort()[Math.floor(count * .95)];
   if (!(loud > 1e-8)) return null;
   const threshold = loud * 10 ** (-15 / 10);
   for (let f = 0, held = 0; f < count; f++) {
-    held = smooth[f] >= threshold ? held + 1 : 0;
-    if (held >= 15) return (f - held + 1) * frame / sampleRate;
+    held = levels[f] >= threshold ? held + 1 : 0;
+    if (held >= 15) return (f - held + 1) * seconds;
+  }
+  return null;
+}
+
+// Finds where the vocals around a time began: walks back from it while the level stays within
+// 15 dB of the loudest nearby passage, allowing short dips between syllables, and stops at the
+// first quiet stretch. Sound earlier in an intro cannot move this onset.
+function lyricOnsetBefore({ levels, seconds }, time, span = 4) {
+  const last = Math.min(levels.length - 1, Math.round(time / seconds));
+  const first = Math.max(0, Math.round((time - span) / seconds));
+  if (last - first < 30) return null;
+  let loud = 0;
+  for (let f = Math.max(0, last - Math.round(1 / seconds)); f <= Math.min(levels.length - 1, last + Math.round(2 / seconds)); f++) {
+    loud = Math.max(loud, levels[f]);
+  }
+  if (!(loud > 1e-8)) return null;
+  const threshold = loud * 10 ** (-15 / 10);
+  const pause = Math.round(.3 / seconds);
+  let onset = null;
+  for (let f = last, quiet = 0; f >= first; f--) {
+    if (levels[f] >= threshold) {
+      onset = f;
+      quiet = 0;
+    } else if (onset !== null && ++quiet >= pause) {
+      return onset * seconds;
+    }
   }
   return null;
 }
