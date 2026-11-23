@@ -132,7 +132,8 @@ function validateProjectState(state, projectAssets, projectBackgrounds) {
     if (clip.track === 'visual') checkProject(asset?.type === 'video' || asset?.type === 'image');
     if (clip.track === 'audio') checkProject(asset?.type === 'audio' && clip.audioTrack === (asset.sourceVideo ? clip.asset : undefined));
     if (clip.track === 'overlay' && clip.asset !== undefined) checkProject(asset?.type === 'image');
-    if (clip.track !== 'audio') checkProject(clip.audioTrack === undefined);
+    if (clip.track !== 'audio') checkProject(clip.audioTrack === undefined && clip.visualizer === undefined);
+    if (clip.visualizer !== undefined) checkProject(validVisualizerSettings(clip.visualizer));
     if (clip.background?.image) checkProject(projectBackgrounds.has(clip.background.image));
   }
 }
