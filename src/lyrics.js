@@ -145,12 +145,18 @@ function updateLyricCloudKey() {
   }
 }
 
+function syncSaveTimedLyrics() {
+  $('saveTimedLyrics').disabled = !parseLrc($('lyricsText').value).cues.length;
+}
+
 function setLyricTranscriptionBusy(busy) {
   for (const name of ['lyricsEngine', 'alignLyrics', 'lyricsCloudProvider', 'lyricsCloudKey',
     'rememberLyricsCloudKey', 'forgetLyricsCloudKey', 'transcribeLyrics', 'chooseLyricsFile', 'useSongSpecLyrics', 'applyLyrics']) {
     $(name).disabled = busy;
   }
   $('lyricsText').readOnly = busy;
+  if (busy) $('saveTimedLyrics').disabled = true;
+  else syncSaveTimedLyrics();
   $('stopLyricsTranscription').hidden = !busy;
 }
 
@@ -231,6 +237,7 @@ async function runLyricTranscription() {
     if (align && !alignment) throw Error('Whisper could not match your lyrics to this audio. Check the selected clip and lyrics.');
     const cues = alignment?.cues ?? groupLyricWords(timed);
     text.value = formatTranscribedLrc(cues, start, end);
+    syncSaveTimedLyrics();
     lyricsHandoffInDialog = null;
     $('lyricsTextLabel').textContent = 'Timed lyrics';
     if (!align) $('lyricsSongSpecHint').hidden = true;
@@ -271,6 +278,7 @@ function openLyricsDialog(audio) {
   $('alignLyrics').checked = false;
   loadLyricCloudKey();
   syncLyricEngine();
+  syncSaveTimedLyrics();
   $('lyricsDialog').showModal();
 }
 
@@ -327,8 +335,10 @@ function connectLyricsImport() {
     $('lyricsSongSpecHint').hidden = false;
     $('alignLyrics').checked = true;
     syncLyricEngine();
+    syncSaveTimedLyrics();
     message.textContent = '';
   };
+  $('saveTimedLyrics').onclick = () => saveTimedLyricsToSongSpec(parseLrc(text.value).cues);
   $('chooseLyricsFile').onclick = () => input.click();
   $('cancelLyrics').onclick = () => dialog.close();
   text.oninput = () => {
@@ -336,6 +346,7 @@ function connectLyricsImport() {
     apply.disabled = false;
     $('transcribeLyrics').disabled = false;
     message.textContent = '';
+    syncSaveTimedLyrics();
   };
   input.onchange = async () => {
     const file = input.files[0];
@@ -352,6 +363,7 @@ function connectLyricsImport() {
         $('lyricsTextLabel').textContent = 'Lyrics or timed LRC';
         $('lyricsSongSpecHint').hidden = true;
         text.value = contents;
+        syncSaveTimedLyrics();
       }
     } catch {
       if (dialog.open && revision === lyricsFileRevision) message.textContent = 'Could not read this lyrics file.';

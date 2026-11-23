@@ -1,5 +1,11 @@
 # Framecut handoff: Claude session, 2026-11-23
 
+## Song Spec work (2026-11-23)
+
+**Phase 1 (done):** the "Save Timed Lyrics to Song Spec" button in the lyrics dialog writes the Timed lyrics section, and "Use Song Spec Lyrics" fills the lyrics box from the spec's Lyrics section. `src/songspec.js` is the v1.1.0 copy of the GP Song Tools library, and `tests/song-spec.test.js` covers it. GP Producer writes Video sequence and reads Timed lyrics.
+
+**Phase 2 (TO DO, not started):** retrieve the produced video clips from the Google Drive folder GP Producer saves them to, and place them on the timeline in order using the spec's Video sequence section. Wait for the user's go-ahead before starting.
+
 Repo: `gp-songtools/framecut`. `origin/main` is at `4b56b78` (merge of #17). All of this work is merged and deployed to GitHub Pages. No Claude PRs are open and there are no uncommitted changes.
 
 Read `CLAUDE.md` on `origin/main` first. Since #16, it requires the subagent workflow for every task:
