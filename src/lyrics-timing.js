@@ -56,33 +56,57 @@ function normalizeLyricWords(words, duration, firstSignal, segments = [], audioO
     }
   }
 
-  repairOpeningLyricWords(timed, firstSignal, audioOnset);
+  repairOpeningLyricWords(timed, firstSignal, audioOnset, segments);
   return timed;
 }
 
-// Whisper often pins the opening word(s) to the clip start and stretches them across an
-// instrumental intro, or leaves one short word there before a long gap. Move those words
-// next to the first densely timed word, then refine with the audio's level onset if it agrees.
-function repairOpeningLyricWords(timed, firstSignal, audioOnset) {
+// Whisper often pins the opening line to the clip start after an instrumental intro. It may
+// stretch one or more of its words across the intro, leave a short word before a gap, or squeeze
+// the whole line in at zero. Find the trustworthy end of that opening run (a stretched word's end,
+// the next word after a gap, or the end of the phrase Whisper reported), then place the run just
+// before it and refine with the audio's level onset when it agrees.
+function repairOpeningLyricWords(timed, firstSignal, audioOnset, segments = []) {
   if (timed.length < 2 || timed[0].start > .15) return;
   const normal = word => word.end - word.start >= .06 && word.end - word.start <= 1.2;
-  const durations = timed.slice(1, 9).filter(normal).map(word => word.end - word.start).sort((a, b) => a - b);
+  const durations = timed.slice(0, 12).filter(normal).map(word => word.end - word.start).sort((a, b) => a - b);
   if (durations.length < 3) return;
   const typical = durations[Math.floor(durations.length / 2)];
-  let anchor = 1;
-  while (anchor < Math.min(4, timed.length - 1) && !normal(timed[anchor])) anchor++;
-  const target = timed[anchor];
-  const span = target.start - timed[0].start;
-  const stretched = timed.slice(0, anchor).every((word, i) => Math.abs(word.end - timed[i + 1].start) <= .2);
-  const gap = anchor === 1 && Number.isFinite(audioOnset) && audioOnset > timed[0].end + .3;
-  if (span <= Math.max(2.5, typical * 6) || !(stretched || gap)) return;
-  let start = Math.max(firstSignal, target.start - anchor * typical);
-  if (Number.isFinite(audioOnset) && audioOnset >= start - 1 && audioOnset < target.start - .06 * anchor) start = audioOnset;
-  const step = (target.start - start) / anchor;
-  for (let i = 0; i < anchor; i++) {
-    timed[i].start = start + i * step;
-    timed[i].end = Math.max(timed[i].start, Math.min(timed[i].end, start + (i + 1) * step));
+  const stretched = word => word.end - word.start > Math.max(1.5, typical * 4);
+  let count = 0;
+  while (count < Math.min(12, timed.length - 1)) {
+    if (count && timed[count].start - timed[count - 1].end > .2) break;
+    const word = timed[count++];
+    // Keep consecutive stretched words together; the run ends after the last of them.
+    if (stretched(word) && !(stretched(timed[count]) && timed[count].start - word.end <= .2)) break;
   }
+  const run = timed.slice(0, count);
+  const next = timed[count];
+  const last = run.at(-1);
+  const knownOnset = Number.isFinite(audioOnset) && audioOnset > timed[0].start + .3 ? audioOnset : null;
+  let end = null;
+  if (stretched(last)) {
+    end = Math.min(last.end, next.start);
+  } else if (next.start - last.end > Math.max(2, typical * 6)) {
+    const phrase = segments.find(({ start, end: phraseEnd }) =>
+      Number.isFinite(start) && Number.isFinite(phraseEnd) && start <= last.start + .15 && phraseEnd > last.end);
+    const phraseTokens = lyricTokens(phrase?.text ?? '');
+    const runTokens = run.flatMap(({ word }) => lyricTokens(word));
+    const samePhrase = runTokens.length && runTokens.every((token, i) => phraseTokens[i] === token);
+    if (samePhrase && phrase.end - last.end > 1 && phrase.end <= next.start + .2) end = phrase.end;
+    // An unfinished phrase before a long gap belongs with the next word.
+    else if (!/[.!?。！？,;:]["'”’)]?$/.test(last.word)) end = next.start;
+    else if (knownOnset !== null && knownOnset < next.start - .06 * count) {
+      end = Math.min(next.start, knownOnset + (last.end - timed[0].start));
+    }
+  }
+  if (end === null || end - timed[0].start <= Math.max(2.5, typical * 2 * count)) return;
+  let start = Math.max(firstSignal, end - count * typical);
+  if (knownOnset !== null && knownOnset >= start - 1.5 && knownOnset < end - .06 * count) start = knownOnset;
+  const step = (end - start) / count;
+  run.forEach((word, i) => {
+    word.start = start + i * step;
+    word.end = start + (i + 1) * step;
+  });
 }
 
 // Returns when the clip first reaches a sustained level near its loud passages (in seconds).

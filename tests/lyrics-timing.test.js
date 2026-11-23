@@ -90,9 +90,12 @@ const openingWords = (first, rest = 7.5) => [first, ...['quiet', 'apple', 'garde
 test('moves a short zero-time opening word to the audio onset across an instrumental gap', () => {
   const words = JSON.stringify(openingWords({ word: 'The', start: 0, end: .38 }, 7.75));
   assert.equal(run('normalizeLyricWords(' + words + ', 12, .025, [], 7.48)[0].start'), 7.48);
-  // Without audio evidence of a quiet intro, a lone opening word keeps its timing.
-  assert.equal(run('normalizeLyricWords(' + words + ', 12, .025, [], .03)[0].start'), .025);
-  assert.equal(run('normalizeLyricWords(' + words + ', 12, .025)[0].start'), .025);
+  // An unfinished opening phrase joins the next word even without a usable audio onset.
+  assert.equal(run('normalizeLyricWords(' + words + ', 12, .025, [], .03)[0].start'), 7.5);
+  assert.equal(run('normalizeLyricWords(' + words + ', 12, .025)[0].start'), 7.5);
+  // A complete line at the clip start with no other evidence keeps its timing.
+  const line = JSON.stringify(openingWords({ word: 'Hello.', start: 0, end: .38 }, 7.75));
+  assert.equal(run('normalizeLyricWords(' + line + ', 12, .025)[0].start'), .025);
   assert.equal(run('alignWrittenLyrics(["The quiet apple"], normalizeLyricWords(' + words +
     ', 12, .025, [], 7.48), 12, .025).cues[0].time'), 7.48);
 });
@@ -115,4 +118,33 @@ test('detects a sustained level onset after a quiet intro', () => {
   })()`);
   assert.ok(Math.abs(onset - 7.48) <= .03, String(onset));
   assert.equal(run('detectLyricOnset(new Float32Array(5000), 1000)'), null);
+});
+
+// Shapes that left "This October." at 00:00.025 before the vocals at 7.2 seconds.
+const splitUpRest = [['One', 10.92, 11.3], ['cabin.', 11.3, 11.9], ['Five', 13.94, 14.3], ['friends.', 14.3, 15],
+  ['Zero', 17.02, 17.4], ['survival', 17.4, 18], ['instincts.', 18, 18.9]];
+const splitUpOpening = (head, onset, segments = []) => {
+  const words = [...head, ...splitUpRest].map(([word, start, end]) => ({ word, start, end }));
+  return run('groupLyricWords(normalizeLyricWords(' + JSON.stringify(words) + ', 190, .025, ' +
+    JSON.stringify(segments) + ', ' + onset + '))[0]');
+};
+
+test('moves an opening line stretched or squeezed before a pause to the vocals', () => {
+  const shapes = {
+    stretchedSecond: [['This', 0, .3], ['October.', .3, 8.4]],
+    bothStretched: [['This', 0, 4], ['October.', 4, 8.4]],
+    unfinished: [['This', 0, .3], ['October.', 7.5, 8.4]]
+  };
+  for (const [name, head] of Object.entries(shapes)) {
+    const cue = splitUpOpening(head, 'null');
+    assert.equal(cue.text, 'This October.', name);
+    assert.ok(cue.time > 6.7 && cue.time < 7.8, name + ' ' + cue.time);
+    assert.equal(splitUpOpening(head, 7.2).time, 7.2, name);
+  }
+  const squeezed = [['This', 0, .3], ['October.', .3, 1.1]];
+  const phrase = [{ text: ' This October.', start: 0, end: 8.4 }];
+  const fromPhrase = splitUpOpening(squeezed, 'null', phrase).time;
+  assert.ok(fromPhrase > 6.7 && fromPhrase < 7.8, String(fromPhrase));
+  assert.equal(splitUpOpening(squeezed, 7.2).time, 7.2);
+  assert.equal(splitUpOpening(squeezed, 'null').time, .025);
 });
