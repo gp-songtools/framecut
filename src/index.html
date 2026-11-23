@@ -35,6 +35,7 @@
 .audio-fade-handle:hover,.audio-fade-handle:focus-visible{background:#f7ecff}
 .audio-fades.close-handles [data-fade=audioFadeOut]{top:6px}
 #extractAudio,#importLyrics{margin-top:9px}
+#placeDialog{width:min(560px,90vw);max-height:90vh;overflow:auto}#placeDialog h2{margin:0 0 8px}#placeDialog ul,#placeDialog ol{margin:6px 0;padding-left:0;list-style:none}#placeDialog li{display:flex;flex-wrap:wrap;gap:2px 10px;margin:4px 0;overflow-wrap:anywhere}#placeDialog .place-scene{font-variant-numeric:tabular-nums}#placeDialog label{display:block;margin:10px 0 0}#placeDialog small{display:block;margin-left:22px;color:var(--muted)}#placeDialog p{overflow-wrap:anywhere}
 #lyricsDialog{width:min(540px,90vw);max-height:90vh;overflow:auto}
 #lyricsDialog h2{margin:0 0 8px}
 #lyricsDialog label[for=lyricsText]{display:block;margin:12px 0 6px}
@@ -278,6 +279,27 @@ footer.foot{display:flex;flex-wrap:wrap;justify-content:space-between;align-item
 </div><div class="scroll" id="scroll"><div class="lanes" id="lanes"><div class="ruler" id="ruler"></div><div class="lane" data-track="title"></div><div class="lane" data-track="overlay"></div><div class="lane" id="effectLane" data-track="effect"></div><div class="lane video" data-track="visual"></div><div class="lane" data-track="audio"></div><div id="timelineRange" class="timeline-range" aria-hidden="true" hidden></div><div class="playhead" id="playhead"></div><div class="snap-guide" id="snapGuide" aria-hidden="true" hidden></div></div></div></div></section>
 <footer class="foot"><span id="status" role="status">Space to play · S to split · Drag clip edges to trim</span><nav class="suite-links" aria-label="GP Song Tools"><a href="https://gp-songtools.github.io/toolsmenu/privacy.html" target="_blank" rel="noopener">Privacy &amp; credits</a><a href="https://gp-songtools.github.io/toolsmenu/" target="_blank" rel="noopener">More GP Song Tools</a><a href="https://github.com/gp-songtools/framecut" target="_blank" rel="noopener">Source</a></nav></footer>
 <dialog id="dialog"><h2>Export video</h2><p id="exportText" class="secondary">Render the timeline to a downloadable video. Keep this tab open during export.</p><label class="field">Format <select id="format"></select></label><progress id="progress" max="1" value="0" hidden></progress><div class="row" style="justify-content:flex-end;margin-top:16px"><button id="cancel">Close</button><button id="render" class="accent">Render video</button></div></dialog>
+<dialog id="placeDialog" aria-labelledby="placeHeading">
+  <h2 id="placeHeading">Place clips</h2>
+  <p id="placeZero" class="secondary"></p>
+  <div id="placeScenesBox">
+    <ol id="placeScenes"></ol>
+    <p id="placeSkippedLines" class="spec-note" hidden></p>
+    <div id="placeUnmatched" hidden><p class="spec-stale">Not matched, won't be placed:</p><ul id="placeUnmatchedList"></ul></div>
+  </div>
+  <div id="placeOptions">
+    <label><input id="placeKeepFull" type="checkbox"> Keep the full clips</label>
+    <small>Off: each clip is trimmed to its scene's length.</small>
+    <label><input id="placeReplace" type="checkbox"> Replace existing clips</label>
+    <small>On: a scene that already has a clip gets the new one. Scenes without a clip get theirs either way.</small>
+    <label><input id="placeMute" type="checkbox" checked> Mute clip audio</label>
+    <small>On: placed clips are silent, so only the song plays.</small>
+    <p id="placeMagnetNote" class="spec-note" hidden>The magnet is on, so the visual track stays end to end; clips keep their order but may not line up with song time if any are longer or shorter than their scene.</p>
+  </div>
+  <div id="placeResult" hidden></div>
+  <input id="placeFiles" type="file" multiple accept="video/*,.mp4,.mov,.webm" hidden>
+  <div class="row" style="justify-content:flex-end;margin-top:16px"><button id="placeCancel" type="button">Cancel</button><button id="placeGo" type="button" class="accent">Place</button></div>
+</dialog>
 <dialog id="lyricsDialog" aria-labelledby="lyricsHeading">
   <form id="lyricsForm">
     <h2 id="lyricsHeading">Import Lyrics</h2>

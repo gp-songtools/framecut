@@ -122,7 +122,11 @@ function renderFramecutSongSpec() {
   if (videoLines) {
     const row = make('div', null, 'spec-row');
     row.append(make('span', 'Video sequence from ' + (spec.videoBy || 'the song spec') + ': ' + videoLines +
-      (videoLines === 1 ? ' clip.' : ' clips.')), make('small', 'Placing clips on the timeline is coming in Phase 2.', 'spec-note'));
+      (videoLines === 1 ? ' clip.' : ' clips.')), make('small', 'Pick the scene clip files to put them on the timeline.', 'spec-note'));
+    const place = make('button', 'Place clips…');
+    place.type = 'button';
+    place.onclick = openPlaceFilePicker;
+    row.append(place);
     rows.push(row);
   }
   for (const note of spec.stale) rows.push(make('p', note, 'spec-stale'));

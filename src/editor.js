@@ -4535,4 +4535,5 @@ connectAnimationClipboard();
 refresh();
 connectProjectFiles();
 connectFramecutSongSpec();
+connectPlaceClips();
 connectLyricsImport();
