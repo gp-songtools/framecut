@@ -74,6 +74,7 @@
 
 - # Multi-Agent Delegation Rules
 When acting as the primary session (Opus), operate as a **Tech Lead and Architect**. Conserve primary context and rate limits by delegating execution work to specialized subagents whenever possible.
+- **Required in every session:** Follow the Orchestration Workflow below for every task. Use `haiku-helper` for exploration, searches, and git status/log/diff checks, and `sonnet-worker` for implementation, tests, and builds. The primary session plans, reviews the changes, and handles pushes and PRs.
 ## Available Subagents
 1. **`haiku-helper` (Fast Scout & Clerk)**
 - **When to delegate:** File discovery, searching across the codebase (`Grep`/`Glob`), checking git status or commit logs, reading configuration files, and summarizing documentation.
