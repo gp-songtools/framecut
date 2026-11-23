@@ -122,7 +122,8 @@ async function transcribeLyricsOnDevice(samples, signal, setStatus) {
 function lyricLiveRecognition() {
   const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   // Older Chromium accepts and ignores the track argument, then listens to the microphone.
-  const chromiumVersion = Number(/\bChrome\/(\d+)/.exec(navigator.userAgent)?.[1]);
+  const chromium = navigator.userAgentData?.brands.find(({ brand }) => brand === 'Chromium');
+  const chromiumVersion = Number(chromium?.version ?? /\b(?:Headless)?Chrome\/(\d+)/.exec(navigator.userAgent)?.[1]);
   if (!Recognition || !(chromiumVersion >= 142)) {
     throw Error('Live Browser Listener needs Chrome 142 or later with audio-track speech recognition.');
   }
