@@ -3344,6 +3344,41 @@ function titleFormattingFields(clip, section) {
   section.append(row, colorRow, emphasis);
 }
 
+const titleStyleCopyFields = [
+  'size', 'fontFamily', 'textColor', 'textBold', 'textItalic', 'textUnderline', 'textStrike', 'textAppearance',
+  'overlayMotion', 'textIn', 'textOut', 'textLoop', 'textInDuration', 'textOutDuration', 'presetOptions'
+];
+
+function applyTitleStyleToAll(source) {
+  const targets = clips.filter(item => item.track === 'title' && item !== source);
+  if (!targets.length) return;
+  remember();
+  const staticFields = overlayFields.map(([, key]) => key);
+  const keys = source.overlayKeys ?? [];
+  const pose = overlayTransformAt(source, overlaySourceTime(source));
+  for (const target of targets) {
+    for (const field of titleStyleCopyFields) {
+      if (source[field] === undefined) delete target[field];
+      else target[field] = structuredClone(source[field]);
+    }
+    const shift = target.start - source.start;
+    const shifted = keys.map(key => ({ ...structuredClone(key), at: key.at + shift }))
+      .filter(key => key.at >= target.start && key.at <= target.end);
+    if (shifted.length) {
+      for (const field of staticFields) {
+        if (source[field] === undefined) delete target[field];
+        else target[field] = source[field];
+      }
+      target.overlayKeys = shifted;
+    } else {
+      for (const field of staticFields) target[field] = pose[field];
+      delete target.overlayKeys;
+    }
+  }
+  refresh();
+  notify('Applied style to ' + targets.length + ' text clip' + (targets.length === 1 ? '' : 's') + '.');
+}
+
 function titleAppearanceFields(clip, section, sliderField) {
   for (const [key, title] of [['outline', 'Outline'], ['shadow', 'Drop shadow'], ['background', 'Background']]) {
     const style = titleAppearance(clip, key);
@@ -3470,6 +3505,14 @@ function inspector() {
     importLyrics.textContent = 'Import Lyrics';
     importLyrics.onclick = () => openLyricsDialog(clip);
     panel.append(importLyrics);
+  }
+  if (clip.track === 'title' && clips.some(item => item.track === 'title' && item !== clip)) {
+    const applyStyle = document.createElement('button');
+    applyStyle.type = 'button';
+    applyStyle.id = 'applyTextStyle';
+    applyStyle.textContent = 'Apply style to all text';
+    applyStyle.onclick = () => applyTitleStyleToAll(clip);
+    panel.append(applyStyle);
   }
   const section = document.createElement('div');
   section.className = 'section';
