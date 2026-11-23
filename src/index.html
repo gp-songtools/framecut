@@ -35,10 +35,16 @@
 .audio-fade-handle:hover,.audio-fade-handle:focus-visible{background:#f7ecff}
 .audio-fades.close-handles [data-fade=audioFadeOut]{top:6px}
 #extractAudio,#importLyrics{margin-top:9px}
-#lyricsDialog{width:min(500px,90vw)}
+#lyricsDialog{width:min(540px,90vw);max-height:90vh;overflow:auto}
 #lyricsDialog h2{margin:0 0 8px}
 #lyricsDialog label[for=lyricsText]{display:block;margin:12px 0 6px}
 #lyricsDialog textarea{font-family:ui-monospace,monospace}
+#lyricsTranscriber{margin:12px 0 0;padding:10px 12px 12px;min-width:0;border:1px solid var(--line);border-radius:8px}
+#lyricsTranscriber legend{font-weight:700}
+#lyricsTranscriber .row{flex-wrap:wrap}
+#lyricsTranscriber .field{margin:7px 0}
+#lyricsTranscriber .row+label{display:block;margin-top:8px}
+#lyricsEngineInfo{margin:8px 0}
 #lyricsMessage{color:#ffd1a0}
 #lyricsMessage:empty{display:none}
 #lyricsActions{margin-top:12px;flex-wrap:wrap}
@@ -52,7 +58,6 @@
 #songSpecDetails dt{color:var(--muted)}
 #songSpecDetails dd{margin:0;overflow-wrap:anywhere}
 #songSpecError{color:#ffd1a0}
-#lyricsSongSpecHint a{color:#a9eaff}
 .clip.audio-clip>span{position:absolute;top:2px;left:4px;max-width:calc(100% - 8px);padding:1px 4px;line-height:12px;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
 .clip.overlay-clip{background:#594026;border-color:#9a7245;height:34px}
 .lane[data-track=effect]{position:relative}
@@ -263,17 +268,36 @@
     <h2 id="lyricsHeading">Import Lyrics</h2>
     <p id="lyricsAudio" class="secondary"></p>
     <button id="useSongSpecLyrics" type="button" hidden>Use Song Spec Lyrics</button>
-    <p id="lyricsSongSpecHint" class="secondary" hidden>
-      <span id="lyricsSongSpecAttribution"></span>
-      <a href="https://gp-songtools.github.io/auralyrics-studio/" target="_blank" rel="noopener">Open AuraLyrics Studio</a> to time these lyrics, then send them to Framecut or import an .lrc file.
-      If you opened a local Song Spec, open the same file there.
-    </p>
-    <label id="lyricsTextLabel" for="lyricsText">Paste timed LRC from Auralyrics</label>
-    <textarea id="lyricsText" rows="7" spellcheck="false" placeholder="[00:04.50] Your first lyric" autofocus></textarea>
-    <input id="lyricsFile" type="file" accept=".lrc" hidden>
+    <p id="lyricsSongSpecHint" class="secondary" hidden><span id="lyricsSongSpecAttribution"></span></p>
+    <label id="lyricsTextLabel" for="lyricsText">Lyrics or timed LRC</label>
+    <textarea id="lyricsText" rows="6" spellcheck="false" autofocus></textarea>
+    <input id="lyricsFile" type="file" accept=".lrc,.txt" hidden>
+    <fieldset id="lyricsTranscriber">
+      <legend>Transcribe audio</legend>
+      <div class="row">
+        <label for="lyricsEngine">Method</label>
+        <select id="lyricsEngine">
+          <option value="local">In-browser Whisper</option>
+          <option value="cloud">Whisper AI Cloud</option>
+          <option value="live">Live Browser Listener</option>
+        </select>
+      </div>
+      <label><input id="alignLyrics" type="checkbox"> Align my lyrics to the editor</label>
+      <div id="lyricsCloudOptions" hidden>
+        <label class="field">Provider
+          <select id="lyricsCloudProvider"><option value="groq">Groq</option><option value="openai">OpenAI</option></select>
+        </label>
+        <label class="field">API key <input id="lyricsCloudKey" type="password" autocomplete="off" spellcheck="false"></label>
+      </div>
+      <p id="lyricsEngineInfo" class="secondary"></p>
+      <div class="row">
+        <button id="transcribeLyrics" type="button">Transcribe</button>
+        <button id="stopLyricsTranscription" type="button" hidden>Cancel transcription</button>
+      </div>
+    </fieldset>
     <p id="lyricsMessage" role="status"></p>
     <div class="row" id="lyricsActions">
-      <button id="chooseLyricsFile" type="button">Open .lrc File</button>
+      <button id="chooseLyricsFile" type="button">Open Lyrics File</button>
       <span class="spacer"></span>
       <button id="cancelLyrics" type="button">Cancel</button>
       <button id="applyLyrics" type="submit" class="accent">Import Lyrics</button>
