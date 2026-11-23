@@ -42,6 +42,9 @@
 #lyricsMessage{color:#ffd1a0}
 #lyricsMessage:empty{display:none}
 #lyricsActions{margin-top:12px;flex-wrap:wrap}
+#lyricsHandoff{justify-content:space-between;padding:7px 14px;background:#223741;color:#c8eafa;border-bottom:1px solid var(--line)}
+#lyricsHandoff[hidden]{display:none}
+#lyricsHandoffStatus{overflow-wrap:anywhere}
 .clip.audio-clip>span{position:absolute;top:2px;left:4px;max-width:calc(100% - 8px);padding:1px 4px;line-height:12px;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
 .clip.overlay-clip{background:#594026;border-color:#9a7245;height:34px}
 .lane[data-track=effect]{position:relative}
@@ -228,6 +231,7 @@
 <aside class="panel inspector"><h2 class="title">Inspector</h2><div id="inspect"></div></aside>
 </main>
 <section class="timeline" aria-label="Timeline"><div class="toolbar"><h2>Timeline</h2><button id="undo" title="Undo (Ctrl+Z)">↶</button><button id="redo" title="Redo (Ctrl+Shift+Z)">↷</button><button id="split" title="Split at playhead (S)">✂ Split</button><button id="remove" title="Delete selected clip">Delete</button><button id="rippleDelete" title="Delete and shift later clips on this track">Ripple Delete</button><button id="snap" aria-pressed="true" title="Snap to clip edges and the playhead">Snap</button><button id="magnet" aria-pressed="false" title="Keep the video track contiguous when inserting, rearranging, trimming, or deleting clips">Main-track magnet</button><button id="addTitle">＋ Text</button><button id="timelineImportLyrics" type="button" disabled title="Select an audio clip first">Import Lyrics</button><div class="range-tools row" role="group" aria-label="Timeline preview range"><button id="rangeTool" aria-pressed="false" title="Drag on a track or ruler to select a range. You can also Shift-drag or set the bounds at the playhead with I and O.">Range</button><button id="loopRange" aria-pressed="false" title="Loop the selected range during preview" disabled>Loop</button><button id="clearRange" class="range-clear plain" aria-label="Clear range" title="Clear range" hidden>×</button><output id="rangeBounds" class="mono" aria-label="Selected range bounds" aria-live="polite" hidden></output></div><span class="spacer"></span><label class="secondary" for="zoom">Zoom</label><input class="zoom" id="zoom" type="range" min="25" max="220" value="78"></div>
+<div id="lyricsHandoff" class="row" hidden><span id="lyricsHandoffStatus" role="status"></span><button id="dismissLyricsHandoff" type="button" aria-label="Dismiss Auralyrics handoff">Dismiss</button></div>
 <div class="timeline-inner"><div class="tracks"><div style="height:33px">TRACKS</div><div style="height:53px">Text</div><div style="height:53px">Overlay</div><div id="effectTrackLabel" style="height:53px">Effects</div>
 <div class="track-mixer video-track" data-mix-track="visual"><span class="track-name">Video</span><button class="track-mute" type="button" aria-label="Mute Video track" aria-pressed="false">Mute</button></div>
 <div class="track-mixer audio-track" data-mix-track="audio"><span class="track-name">Audio</span><button class="track-mute" type="button" aria-label="Mute Audio track" aria-pressed="false">Mute</button></div>
@@ -238,7 +242,7 @@
   <form id="lyricsForm">
     <h2 id="lyricsHeading">Import Lyrics</h2>
     <p id="lyricsAudio" class="secondary"></p>
-    <label for="lyricsText">Paste timed LRC from Auralyrics</label>
+    <label id="lyricsTextLabel" for="lyricsText">Paste timed LRC from Auralyrics</label>
     <textarea id="lyricsText" rows="7" spellcheck="false" placeholder="[00:04.50] Your first lyric" autofocus></textarea>
     <input id="lyricsFile" type="file" accept=".lrc" hidden>
     <p id="lyricsMessage" role="status"></p>

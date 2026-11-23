@@ -2,6 +2,43 @@
 
 let lyricsAudioClip;
 let lyricsFileRevision = 0;
+const lyricsHandoffKey = 'gpsongtools.framecut.lyrics.v1';
+const lyricsHandoffLifetime = 24 * 60 * 60 * 1000;
+let pendingLyricsHandoff;
+let lyricsHandoffInDialog;
+
+function syncLyricsHandoff() {
+  pendingLyricsHandoff = null;
+  try {
+    const stored = localStorage.getItem(lyricsHandoffKey);
+    const handoff = JSON.parse(stored);
+    if (handoff?.version === 1 && Number.isFinite(handoff.sentAt) &&
+        typeof handoff.lrc === 'string' && handoff.lrc.trim() && typeof handoff.audioName === 'string') {
+      if (Date.now() - handoff.sentAt < lyricsHandoffLifetime) pendingLyricsHandoff = { ...handoff, stored };
+      else localStorage.removeItem(lyricsHandoffKey);
+    }
+  } catch {
+    // Local LRC import still works without browser storage.
+  }
+  const banner = $('lyricsHandoff');
+  banner.hidden = !pendingLyricsHandoff;
+  if (pendingLyricsHandoff) {
+    const audio = pendingLyricsHandoff.audioName;
+    $('lyricsHandoffStatus').textContent = 'Lyrics received from Auralyrics' + (audio ? ' for ' + audio : '') +
+      '. Select the matching Audio clip and choose Import Lyrics.';
+  }
+}
+
+function clearLyricsHandoff(handoff) {
+  if (!handoff) return;
+  try {
+    // A newer handoff can arrive while the import dialog is open.
+    if (localStorage.getItem(lyricsHandoffKey) === handoff.stored) localStorage.removeItem(lyricsHandoffKey);
+  } catch {
+    // The editor can finish importing the lyrics already in the dialog.
+  }
+  syncLyricsHandoff();
+}
 
 function parseLrc(text) {
   const timestamp = /\[(\d+):([0-5]?\d)(?:\.(\d{1,3}))?\]\s*/y;
@@ -66,9 +103,12 @@ function openLyricsDialog(audio) {
     refresh();
   }
   lyricsAudioClip = audio;
+  syncLyricsHandoff();
+  lyricsHandoffInDialog = pendingLyricsHandoff;
   lyricsFileRevision++;
   $('lyricsAudio').textContent = 'Sync to ' + assets.get(audio.asset).name;
-  $('lyricsText').value = '';
+  $('lyricsTextLabel').textContent = lyricsHandoffInDialog ? 'Timed lyrics from Auralyrics' : 'Paste timed LRC from Auralyrics';
+  $('lyricsText').value = lyricsHandoffInDialog?.lrc ?? '';
   $('lyricsFile').value = '';
   $('lyricsMessage').textContent = '';
   $('applyLyrics').disabled = false;
@@ -81,6 +121,11 @@ function connectLyricsImport() {
   const text = $('lyricsText');
   const message = $('lyricsMessage');
   const apply = $('applyLyrics');
+  syncLyricsHandoff();
+  window.addEventListener('storage', event => {
+    if (!event.key || event.key === lyricsHandoffKey) syncLyricsHandoff();
+  });
+  $('dismissLyricsHandoff').onclick = () => clearLyricsHandoff(pendingLyricsHandoff);
   $('timelineImportLyrics').onclick = () => openLyricsDialog(active());
   $('chooseLyricsFile').onclick = () => input.click();
   $('cancelLyrics').onclick = () => dialog.close();
@@ -98,7 +143,11 @@ function connectLyricsImport() {
     message.textContent = '';
     try {
       const contents = await file.text();
-      if (dialog.open && revision === lyricsFileRevision) text.value = contents;
+      if (dialog.open && revision === lyricsFileRevision) {
+        lyricsHandoffInDialog = null;
+        $('lyricsTextLabel').textContent = 'Paste timed LRC from Auralyrics';
+        text.value = contents;
+      }
     } catch {
       if (dialog.open && revision === lyricsFileRevision) message.textContent = 'Could not read this LRC file.';
     } finally {
@@ -125,6 +174,8 @@ function connectLyricsImport() {
     remember();
     clips = clips.concat(titles);
     selected = titles[0].id;
+    clearLyricsHandoff(lyricsHandoffInDialog);
+    lyricsHandoffInDialog = null;
     dialog.close();
     seek(titles[0].at);
     refresh();
