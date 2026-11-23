@@ -26,3 +26,7 @@ the band it reacts to, reactivity, glow, opacity, width, height and position, or
 add a palette backdrop. With the clip selected, drag the visualizer in the preview
 to move it, or drag a corner to resize it. The visualizer follows the clip's source audio through playback,
 scrubbing, trims, splits and export, and it is saved with the project.
+
+## Text styling
+
+Select a text clip and choose **Apply style to all text** to copy its font, colors, outline, shadow, background, size, position, motion and In, Out and Loop animations to every other text clip. Each clip keeps its own wording and timing, and one Undo reverts the change.
