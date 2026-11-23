@@ -82,3 +82,37 @@ test('rounds and orders cues inside the trim and maps source time to editable cl
   assert.deepEqual(clips.map(clip => Math.round(clip.at * 1000)), [10000, 10001, 11999]);
   assert.deepEqual(clips.map(clip => Math.round(clip.duration * 1000)), [1, 1998, 1]);
 });
+
+const openingWords = (first, rest = 7.5) => [first, ...['quiet', 'apple', 'garden', 'grows'].map((word, i) => ({
+  word, start: rest + i * .25, end: rest + (i + 1) * .25
+}))];
+
+test('moves a short zero-time opening word to the audio onset across an instrumental gap', () => {
+  const words = JSON.stringify(openingWords({ word: 'The', start: 0, end: .38 }, 7.75));
+  assert.equal(run('normalizeLyricWords(' + words + ', 12, .025, [], 7.48)[0].start'), 7.48);
+  // Without audio evidence of a quiet intro, a lone opening word keeps its timing.
+  assert.equal(run('normalizeLyricWords(' + words + ', 12, .025, [], .03)[0].start'), .025);
+  assert.equal(run('normalizeLyricWords(' + words + ', 12, .025)[0].start'), .025);
+  assert.equal(run('alignWrittenLyrics(["The quiet apple"], normalizeLyricWords(' + words +
+    ', 12, .025, [], 7.48), 12, .025).cues[0].time'), 7.48);
+});
+
+test('repairs several stretched opening words', () => {
+  const words = [{ word: 'The', start: 0, end: 4.1 }, { word: 'quiet', start: 4.1, end: 8 },
+    ...['apple', 'garden', 'grows', 'tall'].map((word, i) => ({ word, start: 8 + i * .25, end: 8.25 + i * .25 }))];
+  const repaired = run('normalizeLyricWords(' + JSON.stringify(words) + ', 12, .025)');
+  assert.deepEqual(repaired.slice(0, 3).map(word => word.start), [7.5, 7.75, 8]);
+  // An onset that agrees with the words refines the start; a far earlier one is ignored.
+  assert.equal(run('normalizeLyricWords(' + JSON.stringify(words) + ', 12, .025, [], 7.4)[0].start'), 7.4);
+  assert.equal(run('normalizeLyricWords(' + JSON.stringify(words) + ', 12, .025, [], 1)[0].start'), 7.5);
+});
+
+test('detects a sustained level onset after a quiet intro', () => {
+  const onset = run(`(() => {
+    const rate = 1000, samples = new Float32Array(12 * rate);
+    for (let i = 0; i < samples.length; i++) samples[i] = Math.sin(i) * (i < 7480 ? .003 : .4);
+    return detectLyricOnset(samples, rate);
+  })()`);
+  assert.ok(Math.abs(onset - 7.48) <= .03, String(onset));
+  assert.equal(run('detectLyricOnset(new Float32Array(5000), 1000)'), null);
+});

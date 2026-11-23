@@ -28,7 +28,7 @@ function wordsFromLyricSegments(segments) {
   });
 }
 
-function normalizeLyricWords(words, duration, firstSignal, segments = []) {
+function normalizeLyricWords(words, duration, firstSignal, segments = [], audioOnset = null) {
   const timed = words.filter(item => typeof item.word === 'string' && item.word.trim() &&
     Number.isFinite(item.start) && item.start < duration)
     .map(item => {
@@ -56,17 +56,61 @@ function normalizeLyricWords(words, duration, firstSignal, segments = []) {
     }
   }
 
-  // Word alignment can stretch the opening word from the clip boundary to the vocals.
-  const next = timed[1];
-  if (next && first.start <= .15 && Math.abs(first.end - next.start) <= .2) {
-    const durations = timed.slice(1, 7).map(word => word.end - word.start)
-      .filter(seconds => seconds >= .06 && seconds <= 1.2).sort((a, b) => a - b);
-    const typical = durations[Math.floor(durations.length / 2)];
-    if (durations.length >= 3 && first.end - first.start > Math.max(2.5, typical * 6)) {
-      first.start = Math.min(next.start, first.end - typical);
-    }
-  }
+  repairOpeningLyricWords(timed, firstSignal, audioOnset);
   return timed;
+}
+
+// Whisper often pins the opening word(s) to the clip start and stretches them across an
+// instrumental intro, or leaves one short word there before a long gap. Move those words
+// next to the first densely timed word, then refine with the audio's level onset if it agrees.
+function repairOpeningLyricWords(timed, firstSignal, audioOnset) {
+  if (timed.length < 2 || timed[0].start > .15) return;
+  const normal = word => word.end - word.start >= .06 && word.end - word.start <= 1.2;
+  const durations = timed.slice(1, 9).filter(normal).map(word => word.end - word.start).sort((a, b) => a - b);
+  if (durations.length < 3) return;
+  const typical = durations[Math.floor(durations.length / 2)];
+  let anchor = 1;
+  while (anchor < Math.min(4, timed.length - 1) && !normal(timed[anchor])) anchor++;
+  const target = timed[anchor];
+  const span = target.start - timed[0].start;
+  const stretched = timed.slice(0, anchor).every((word, i) => Math.abs(word.end - timed[i + 1].start) <= .2);
+  const gap = anchor === 1 && Number.isFinite(audioOnset) && audioOnset > timed[0].end + .3;
+  if (span <= Math.max(2.5, typical * 6) || !(stretched || gap)) return;
+  let start = Math.max(firstSignal, target.start - anchor * typical);
+  if (Number.isFinite(audioOnset) && audioOnset >= start - 1 && audioOnset < target.start - .06 * anchor) start = audioOnset;
+  const step = (target.start - start) / anchor;
+  for (let i = 0; i < anchor; i++) {
+    timed[i].start = start + i * step;
+    timed[i].end = Math.max(timed[i].start, Math.min(timed[i].end, start + (i + 1) * step));
+  }
+}
+
+// Returns when the clip first reaches a sustained level near its loud passages (in seconds).
+function detectLyricOnset(samples, sampleRate) {
+  const frame = Math.max(1, Math.round(sampleRate * .01));
+  const count = Math.floor(samples.length / frame);
+  if (count < 20) return null;
+  const levels = new Float32Array(count);
+  for (let f = 0; f < count; f++) {
+    let sum = 0;
+    for (let i = f * frame, to = i + frame; i < to; i++) sum += samples[i] * samples[i];
+    levels[f] = sum / frame;
+  }
+  const window = 10;
+  const smooth = new Float32Array(count);
+  let total = 0;
+  for (let f = 0; f < count; f++) {
+    total += levels[f] - (f >= window ? levels[f - window] : 0);
+    smooth[f] = total / Math.min(f + 1, window);
+  }
+  const loud = Float32Array.from(smooth).sort()[Math.floor(count * .95)];
+  if (!(loud > 1e-8)) return null;
+  const threshold = loud * 10 ** (-15 / 10);
+  for (let f = 0, held = 0; f < count; f++) {
+    held = smooth[f] >= threshold ? held + 1 : 0;
+    if (held >= 15) return (f - held + 1) * frame / sampleRate;
+  }
+  return null;
 }
 
 function groupLyricWords(words) {
