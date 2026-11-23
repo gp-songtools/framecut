@@ -969,10 +969,10 @@ function dragVisualizerBox(settings, original, corner, dx, dy) {
   let next;
   if (corner) {
     const [sx, sy] = corner;
+    // `sign` is -1 for a left or top corner and 1 for a right or bottom corner.
     const edge = (center, size, delta, sign) => {
       const fixed = center - sign * size / 2;
-      const moved = clamp(center + sign * size / 2 + delta, fixed + sign * minSize, fixed + sign * maxSize);
-      const resized = clamp(Math.abs(moved - fixed), minSize, maxSize);
+      const resized = clamp(sign * (center + sign * size / 2 + delta - fixed), minSize, maxSize);
       return [resized, clamp(fixed + sign * resized / 2 - .5, minOffset, maxOffset)];
     };
     const [width, x] = edge(.5 + original.x, sizeW, dx, sx);

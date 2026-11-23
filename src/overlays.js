@@ -605,8 +605,10 @@ function previewOverlayHit(event) {
   if (!playback && canManipulateLayer(clip, position)) {
     const bounds = previewOverlayBounds(clip, position);
     const [u, v] = rotateOverlayPoint(x - bounds.x, y - bounds.y, -bounds.angle);
-    const corner = overlayCorners.find(([sx, sy]) =>
-      Math.hypot(u - sx * bounds.halfW, v - sy * bounds.halfH) * scale <= 10);
+    // Take the nearest handle so the corners of a small layer stay distinct.
+    const distance = ([sx, sy]) => Math.hypot(u - sx * bounds.halfW, v - sy * bounds.halfH) * scale;
+    const corner = overlayCorners.filter(handle => distance(handle) <= 10)
+      .sort((left, right) => distance(left) - distance(right))[0];
     if (corner) return { clip, bounds, corner };
   }
   if (x < 0 || y < 0 || x > canvas.width || y > canvas.height) return null;
