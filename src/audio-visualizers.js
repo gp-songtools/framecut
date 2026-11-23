@@ -22,18 +22,33 @@ const visualizerPalettes = {
 const visualizerSources = { classic: 'Full mix', kick: 'Kick', bass: 'Bass', melody: 'Melody', vocal: 'Vocals' };
 const visualizerDefaults = {
   preset: 'radial', palette: 'cyberpunk', reactsTo: 'classic', reactivity: 1.4, glow: 22,
-  opacity: 1, size: 1, x: 0, y: 0, backdrop: false
+  opacity: 1, width: 1, height: 1, x: 0, y: 0, backdrop: false
 };
 const visualizerRanges = {
-  reactivity: [.5, 2.5], glow: [5, 35], opacity: [0, 1], size: [.2, 1], x: [-.5, .5], y: [-.5, .5]
+  reactivity: [.5, 2.5], glow: [5, 35], opacity: [0, 1], width: [.05, 1], height: [.05, 1], x: [-.5, .5], y: [-.5, .5]
 };
+const visualizerSizeKeys = ['width', 'height'];
+
+// Projects saved before width and height were separate store one uniform `size`.
+function visualizerSize(settings) {
+  return visualizerSizeKeys.map(key => settings[key] ?? settings.size ?? 1);
+}
+
+function upgradeVisualizerSettings(settings) {
+  if (settings.size === undefined) return;
+  [settings.width, settings.height] = visualizerSize(settings);
+  delete settings.size;
+}
 
 function validVisualizerSettings(settings) {
-  return settings !== null && typeof settings === 'object' && !Array.isArray(settings) &&
-    Object.hasOwn(visualizerPresets, settings.preset) && Object.hasOwn(visualizerPalettes, settings.palette) &&
-    Object.hasOwn(visualizerSources, settings.reactsTo) && typeof settings.backdrop === 'boolean' &&
-    Object.entries(visualizerRanges).every(([key, [min, max]]) =>
-      Number.isFinite(settings[key]) && settings[key] >= min && settings[key] <= max);
+  if (settings === null || typeof settings !== 'object' || Array.isArray(settings) ||
+      !Object.hasOwn(visualizerPresets, settings.preset) || !Object.hasOwn(visualizerPalettes, settings.palette) ||
+      !Object.hasOwn(visualizerSources, settings.reactsTo) || typeof settings.backdrop !== 'boolean') return false;
+  const inRange = (value, [min, max]) => Number.isFinite(value) && value >= min && value <= max;
+  const legacy = settings.width === undefined && settings.height === undefined;
+  if (legacy ? !inRange(settings.size, [.2, 1]) : settings.size !== undefined) return false;
+  return Object.entries(visualizerRanges).every(([key, range]) =>
+    (legacy && visualizerSizeKeys.includes(key)) || inRange(settings[key], range));
 }
 
 // Analysis matches AuraLyrics' AnalyserNode settings: 2048-point Blackman FFT, -100..-30 dB bytes,
@@ -878,7 +893,8 @@ function drawClipVisualizer(target, clip, position) {
   const { width, height } = target.canvas;
   // AuraLyrics tunes its pixel sizes at 1080p, so draw in that reference space.
   const scale = Math.min(width, height) / 1080;
-  const boxW = width / scale * settings.size, boxH = height / scale * settings.size;
+  const [sizeW, sizeH] = visualizerSize(settings);
+  const boxW = width / scale * sizeW, boxH = height / scale * sizeH;
   const rt = createVizRuntime();
   rt.ledGrid = vizLedGrid(boxW, boxH);
   rt.dotCols = Math.max(16, Math.min(80, Math.round(boxW / 22)));
@@ -936,6 +952,39 @@ function drawAudioVisualizers(ctx, position) {
   }
 }
 
+// Selection bounds in canvas pixels, shaped like overlayPose() for the preview handles.
+function visualizerBounds(clip) {
+  const [sizeW, sizeH] = visualizerSize(clip.visualizer);
+  return {
+    x: canvas.width * (.5 + clip.visualizer.x), y: canvas.height * (.5 + clip.visualizer.y),
+    halfW: canvas.width * sizeW / 2, halfH: canvas.height * sizeH / 2, angle: 0, offsetY: 0
+  };
+}
+
+// Moves the box, or drags one corner while the opposite corner stays put.
+function dragVisualizerBox(settings, original, corner, dx, dy) {
+  const [minSize, maxSize] = visualizerRanges.width;
+  const [minOffset, maxOffset] = visualizerRanges.x;
+  const [sizeW, sizeH] = visualizerSize(original);
+  let next;
+  if (corner) {
+    const [sx, sy] = corner;
+    const edge = (center, size, delta, sign) => {
+      const fixed = center - sign * size / 2;
+      const moved = clamp(center + sign * size / 2 + delta, fixed + sign * minSize, fixed + sign * maxSize);
+      const resized = clamp(Math.abs(moved - fixed), minSize, maxSize);
+      return [resized, clamp(fixed + sign * resized / 2 - .5, minOffset, maxOffset)];
+    };
+    const [width, x] = edge(.5 + original.x, sizeW, dx, sx);
+    const [height, y] = edge(.5 + original.y, sizeH, dy, sy);
+    next = { width, height, x, y };
+  } else {
+    next = { width: sizeW, height: sizeH, x: clamp(original.x + dx, minOffset, maxOffset), y: clamp(original.y + dy, minOffset, maxOffset) };
+  }
+  for (const [key, value] of Object.entries(next)) settings[key] = Number(value.toFixed(4));
+  delete settings.size;
+}
+
 function appendVisualizerInspector(clip, panel) {
   const section = document.createElement('div');
   section.className = 'section';
@@ -960,8 +1009,12 @@ function appendVisualizerInspector(clip, panel) {
     section.append(row);
   };
   const settings = clip.visualizer;
+  if (settings) upgradeVisualizerSettings(settings);
   choice('Preset', 'visualizerPreset', [['', 'None'], ...Object.entries(visualizerPresets)], settings?.preset ?? '', preset => {
-    if (preset) clip.visualizer = { ...visualizerDefaults, ...clip.visualizer, preset };
+    if (preset) {
+      clip.visualizer = { ...visualizerDefaults, ...clip.visualizer, preset };
+      upgradeVisualizerSettings(clip.visualizer);
+    }
     else delete clip.visualizer;
   });
   if (settings) {
@@ -970,7 +1023,7 @@ function appendVisualizerInspector(clip, panel) {
     choice('Reacts to', 'visualizerReactsTo', Object.entries(visualizerSources), settings.reactsTo,
       source => settings.reactsTo = source);
     const sliders = [['Reactivity', 'reactivity', '.05'], ['Glow', 'glow', '1'], ['Opacity', 'opacity', '.05'],
-      ['Size', 'size', '.05'], ['Horizontal', 'x', '.01'], ['Vertical', 'y', '.01']];
+      ['Width', 'width', '.01'], ['Height', 'height', '.01'], ['Horizontal', 'x', '.01'], ['Vertical', 'y', '.01']];
     for (const [label, key, step] of sliders) {
       const [min, max] = visualizerRanges[key];
       inspectorSliderField(label, settings[key], min, max, value => settings[key] = value, step, section);
