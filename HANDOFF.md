@@ -1,6 +1,6 @@
 # Framecut handoff: Claude session, 2026-11-23
 
-## Phase 2 plan: GP Song Tools Drive folder and placing clips (decided 2026-11-23, not started)
+## Phase 2 plan: GP Song Tools Drive folder and placing clips (decided 2026-11-23; steps 1–5 done)
 
 The owner answered all questions on 2026-11-23. Wait for the owner to start it.
 
@@ -33,16 +33,16 @@ My Drive/
 
 **Work order (one PR each)**
 1. **Done 2026-11-23** (toolsmenu #26 merged; song spec 1.2.0 copied to the seven tools in one PR each, all merged): toolsmenu: folder standard in `SPEC.md` (a draft is in section 8), `drive_folder` setting (Song Spec 1.2.0), `songdrive.js`, panel Save to Drive / Open from Drive; tests with a mocked Drive API; copy the libraries to all tools.
-2. **Done (local files), not yet merged:** Framecut: **Place clips...** on the Video sequence row of the From the song spec box, from local files first.
+2. **Done (local files), merged:** Framecut: **Place clips...** on the Video sequence row of the From the song spec box, from local files first.
    - Match files to Video sequence lines by exact name, then by the `NN_` scene number. List unmatched files for confirmation.
    - Song time 0 = the selected full-song audio clip (`timeline = audio.at + (t - audio.start)`), else timeline 0.
    - Checkbox **Keep the full clips** (off by default: trim each clip to its scene length from its name or the next line).
    - Checkbox **Replace existing clips** (off by default: when on, a scene that already has a clip gets the new one; scenes without a clip get theirs added in both cases).
    - List missing clips. One undo step. Respect the magnet.
-3. GP Producer: **Add clip files...** (match to scenes by file tag; tick Downloaded and File tag applied), **Save clips to Drive** into `clips/` (anchors and keyframes into `images/`), project .zip into `projects/`. The CSP must allow Google sign-in and Drive hosts.
+3. **Done, merged (GP Producer):** **Add clip files...** (match to scenes by file tag; tick Downloaded and File tag applied), **Save clips to Drive** into `clips/` (anchors and keyframes into `images/`), project .zip into `projects/`. The CSP must allow Google sign-in and Drive hosts.
 4. Framecut: Google Drive as a second source for Place clips (reads `clips/`); **Save export to Drive** into `exports/`; project files into `projects/`.
-   - **Done 2026-11-23, not yet merged:** `src/songdrive.js` (bundled copy) and `src/framecut-drive.js`: **Place clips from Drive...**, **Save to Google Drive too** in the export dialog, header **Drive** menu (save/open project, save last export). Checked in a browser with a mocked Drive; real Drive not tried here.
-5. Docs: About hand-off from "coming next" to shipped; Privacy Google Drive entries for each tool; User Guides.
+   - **Done 2026-11-23, merged:** `src/songdrive.js` (bundled copy) and `src/framecut-drive.js`: **Place clips from Drive...**, **Save to Google Drive too** in the export dialog, header **Drive** menu (save/open project, save last export). Checked in a browser with a mocked Drive; real Drive not tried here.
+5. **Done 2026-11-24** (toolsmenu About hand-off now describes the shipped flow, Privacy lists Framecut's Drive requests, SPEC.md and the GP Producer docs updated). Docs: About hand-off from "coming next" to shipped; Privacy Google Drive entries for each tool; User Guides.
 6. Last: Lyricpad migration from its flat `Lyricpad/` Drive folder to each song's `lyrics/`, offering a one-time move of existing songs.
 7. Later: GP Mastering (`gp-songtools/gp-master`) adopts the song spec (it has no copy of `songspec.js` yet, and `check-copies.js` does not list it), then saves masters into each song's `audio/` folder with `songdrive.js`. Randomash is in the same position for its generated clips.
 
