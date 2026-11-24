@@ -61,3 +61,13 @@ test('plans positions with offset, trimming and short clips', () => {
   const full = plain(call('planPlacement', scenes, byScene, { keepFull: true, durations }));
   assert.deepEqual([full[0].at, full[0].end], [0, 30]);
 });
+
+test('treats Drive files as video by type, or by extension when the type is generic', () => {
+  assert.equal(call('driveVideoType', 'a.mp4', 'video/mp4'), 'video/mp4');
+  assert.equal(call('driveVideoType', 'a.mp4', 'application/octet-stream'), 'video/mp4');
+  assert.equal(call('driveVideoType', 'A.MOV', ''), 'video/quicktime');
+  assert.equal(call('driveVideoType', 'a.webm', undefined), 'video/webm');
+  assert.equal(call('driveVideoType', 'a.txt', 'application/octet-stream'), '');
+  assert.equal(call('driveVideoType', 'a.mp4', 'image/png'), '');
+  assert.equal(call('driveVideoType', 'noext', ''), '');
+});

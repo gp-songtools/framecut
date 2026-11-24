@@ -41,6 +41,7 @@ My Drive/
    - List missing clips. One undo step. Respect the magnet.
 3. GP Producer: **Add clip files...** (match to scenes by file tag; tick Downloaded and File tag applied), **Save clips to Drive** into `clips/` (anchors and keyframes into `images/`), project .zip into `projects/`. The CSP must allow Google sign-in and Drive hosts.
 4. Framecut: Google Drive as a second source for Place clips (reads `clips/`); **Save export to Drive** into `exports/`; project files into `projects/`.
+   - **Done 2026-11-23, not yet merged:** `src/songdrive.js` (bundled copy) and `src/framecut-drive.js`: **Place clips from Drive...**, **Save to Google Drive too** in the export dialog, header **Drive** menu (save/open project, save last export). Checked in a browser with a mocked Drive; real Drive not tried here.
 5. Docs: About hand-off from "coming next" to shipped; Privacy Google Drive entries for each tool; User Guides.
 6. Last: Lyricpad migration from its flat `Lyricpad/` Drive folder to each song's `lyrics/`, offering a one-time move of existing songs.
 7. Later: GP Mastering (`gp-songtools/gp-master`) adopts the song spec (it has no copy of `songspec.js` yet, and `check-copies.js` does not list it), then saves masters into each song's `audio/` folder with `songdrive.js`. Randomash is in the same position for its generated clips.

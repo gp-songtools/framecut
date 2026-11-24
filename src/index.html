@@ -36,6 +36,10 @@
 .audio-fades.close-handles [data-fade=audioFadeOut]{top:6px}
 #extractAudio,#importLyrics{margin-top:9px}
 #placeDialog{width:min(560px,90vw);max-height:90vh;overflow:auto}#placeDialog h2{margin:0 0 8px}#placeDialog ul,#placeDialog ol{margin:6px 0;padding-left:0;list-style:none}#placeDialog li{display:flex;flex-wrap:wrap;gap:2px 10px;margin:4px 0;overflow-wrap:anywhere}#placeDialog .place-scene{font-variant-numeric:tabular-nums}#placeDialog label{display:block;margin:10px 0 0}#placeDialog small{display:block;margin-left:22px;color:var(--muted)}#placeDialog p{overflow-wrap:anywhere}
+.drive-menu{position:relative}.drive-menu summary{cursor:pointer;list-style:none;color:inherit;background:var(--btn);border:1px solid var(--line-ctl);border-radius:7px;padding:8px 11px;user-select:none}.drive-menu summary::-webkit-details-marker{display:none}.drive-menu summary::after{content:" ▾"}.drive-menu summary:hover{background:var(--btn-hover)}.drive-menu summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.drive-menu[open] summary{border-color:var(--accent)}.drive-menu-list{position:absolute;right:0;top:calc(100% + 4px);z-index:40;display:flex;flex-direction:column;gap:4px;min-width:220px;max-width:calc(100vw - 18px);padding:6px;background:var(--panel);border:1px solid var(--line-ctl);border-radius:8px;box-shadow:0 6px 18px #0006}.drive-menu-list button{text-align:left}
+@media(max-width:780px){.header-right{position:relative}.drive-menu{position:static}.drive-menu-list{right:0;min-width:0;width:min(260px,100%)}}
+.drive-export{display:block;margin:12px 0 0}.drive-export-hint{display:block;margin:2px 0 0 22px}
+#driveProjectsDialog{width:min(520px,90vw);max-height:90vh;overflow:auto}#driveProjectsDialog h2{margin:0 0 8px}#driveProjectsDialog ul{margin:6px 0;padding:0;list-style:none}#driveProjectsDialog li{margin:4px 0}#driveProjectsDialog li button{width:100%;text-align:left;display:flex;flex-wrap:wrap;gap:2px 10px;overflow-wrap:anywhere}#driveProjectsDialog .drive-meta{color:var(--muted)}
 #lyricsDialog{width:min(540px,90vw);max-height:90vh;overflow:auto}
 #lyricsDialog h2{margin:0 0 8px}
 #lyricsDialog label[for=lyricsText]{display:block;margin:12px 0 6px}
@@ -228,7 +232,7 @@ footer.foot{display:flex;flex-wrap:wrap;justify-content:space-between;align-item
 </style>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230F0F23'/%3E%3Crect x='6.5' y='6.5' width='19' height='19' rx='2.5' fill='none' stroke='%2338BDF8' stroke-width='3'/%3E%3Cpath d='M13 11.5v9l7-4.5z' fill='%2338BDF8'/%3E%3C/svg%3E"></head>
 <body>
-<header><div class="brand"><div class="mark" aria-hidden="true"><svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" rx="7" fill="#0F0F23"/><rect x="6.5" y="6.5" width="19" height="19" rx="2.5" fill="none" stroke="#38BDF8" stroke-width="3"/><path d="M13 11.5v9l7-4.5z" fill="#38BDF8"/></svg></div>Framecut Studio</div><input class="project" id="project" aria-label="Project name" value="Above the Clouds"><div class="header-right"><button id="new" title="New project">New</button><button id="openProject">Open Project</button><button id="saveProject">Save Project</button><button class="accent" id="export">Export ↗</button><input id="projectFile" type="file" accept=".framecut" hidden></div></header>
+<header><div class="brand"><div class="mark" aria-hidden="true"><svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" rx="7" fill="#0F0F23"/><rect x="6.5" y="6.5" width="19" height="19" rx="2.5" fill="none" stroke="#38BDF8" stroke-width="3"/><path d="M13 11.5v9l7-4.5z" fill="#38BDF8"/></svg></div>Framecut Studio</div><input class="project" id="project" aria-label="Project name" value="Above the Clouds"><div class="header-right"><button id="new" title="New project">New</button><button id="openProject">Open Project</button><button id="saveProject">Save Project</button><details class="drive-menu" id="driveMenu"><summary>Drive</summary><div class="drive-menu-list"><button type="button" id="driveSaveProject">Save project to Drive</button><button type="button" id="driveOpenProject">Open project from Drive…</button><button type="button" id="driveSaveExport" disabled title="Export a video first">Save last export to Drive</button></div></details><button class="accent" id="export">Export ↗</button><input id="projectFile" type="file" accept=".framecut" hidden></div></header>
 <main class="workspace">
 <aside class="panel media" id="media"><div class="row between"><h2 class="title">Media</h2><span id="assetCount" class="secondary"></span></div><button id="import">＋ Import media</button><input id="file" type="file" accept="video/*,image/*,audio/*" multiple hidden><div class="bin" id="bin"></div>
 <section class="section" id="songSpecPanel" aria-label="Song spec">
@@ -278,10 +282,11 @@ footer.foot{display:flex;flex-wrap:wrap;justify-content:space-between;align-item
 <div class="track-mixer audio-track" data-mix-track="audio"><span class="track-name">Audio</span><button class="track-mute" type="button" aria-label="Mute Audio track" aria-pressed="false">Mute</button></div>
 </div><div class="scroll" id="scroll"><div class="lanes" id="lanes"><div class="ruler" id="ruler"></div><div class="lane" data-track="title"></div><div class="lane" data-track="overlay"></div><div class="lane" id="effectLane" data-track="effect"></div><div class="lane video" data-track="visual"></div><div class="lane" data-track="audio"></div><div id="timelineRange" class="timeline-range" aria-hidden="true" hidden></div><div class="playhead" id="playhead"></div><div class="snap-guide" id="snapGuide" aria-hidden="true" hidden></div></div></div></div></section>
 <footer class="foot"><span id="status" role="status">Space to play · S to split · Drag clip edges to trim</span><nav class="suite-links" aria-label="GP Song Tools"><a href="https://gp-songtools.github.io/toolsmenu/privacy.html" target="_blank" rel="noopener">Privacy &amp; credits</a><a href="https://gp-songtools.github.io/toolsmenu/" target="_blank" rel="noopener">More GP Song Tools</a><a href="https://github.com/gp-songtools/framecut" target="_blank" rel="noopener">Source</a></nav></footer>
-<dialog id="dialog"><h2>Export video</h2><p id="exportText" class="secondary">Render the timeline to a downloadable video. Keep this tab open during export.</p><label class="field">Format <select id="format"></select></label><progress id="progress" max="1" value="0" hidden></progress><div class="row" style="justify-content:flex-end;margin-top:16px"><button id="cancel">Close</button><button id="render" class="accent">Render video</button></div></dialog>
+<dialog id="dialog"><h2>Export video</h2><p id="exportText" class="secondary">Render the timeline to a downloadable video. Keep this tab open during export.</p><label class="field">Format <select id="format"></select></label><label class="drive-export"><input id="exportToDrive" type="checkbox"> Save to Google Drive too</label><small class="drive-export-hint secondary">Also uploads the video to this song's exports folder in Google Drive.</small><progress id="progress" max="1" value="0" hidden></progress><div class="row" style="justify-content:flex-end;margin-top:16px"><button id="cancel">Close</button><button id="render" class="accent">Render video</button></div></dialog>
 <dialog id="placeDialog" aria-labelledby="placeHeading">
   <h2 id="placeHeading">Place clips</h2>
   <p id="placeZero" class="secondary"></p>
+  <p id="placeSource" class="secondary" hidden></p>
   <div id="placeScenesBox">
     <ol id="placeScenes"></ol>
     <p id="placeSkippedLines" class="spec-note" hidden></p>
@@ -299,6 +304,12 @@ footer.foot{display:flex;flex-wrap:wrap;justify-content:space-between;align-item
   <div id="placeResult" hidden></div>
   <input id="placeFiles" type="file" multiple accept="video/*,.mp4,.mov,.webm" hidden>
   <div class="row" style="justify-content:flex-end;margin-top:16px"><button id="placeCancel" type="button">Cancel</button><button id="placeGo" type="button" class="accent">Place</button></div>
+</dialog>
+<dialog id="driveProjectsDialog" aria-labelledby="driveProjectsHeading">
+  <h2 id="driveProjectsHeading">Open project from Drive</h2>
+  <p id="driveProjectsFolder" class="secondary"></p>
+  <ul id="driveProjectsList"></ul>
+  <div class="row" style="justify-content:flex-end;margin-top:16px"><button id="driveProjectsCancel" type="button">Cancel</button></div>
 </dialog>
 <dialog id="lyricsDialog" aria-labelledby="lyricsHeading">
   <form id="lyricsForm">
