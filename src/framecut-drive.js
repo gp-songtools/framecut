@@ -111,13 +111,13 @@ function placeClipsFromDrive() {
     const folder = await framecutSongFolder({ create: false });
     const dir = await SongDrive.subfolder(folder.id, 'clips', { create: false });
     if (!dir) {
-      notify("No clips folder in this song's Drive folder yet. Save clips to Drive in GP Producer first.");
+      notify("No clips folder in this song’s Drive folder yet. Save clips to Drive in GP Producer first.");
       return;
     }
     const entries = (await SongDrive.list(dir.id))
       .map(file => ({ name: file.name, size: Number(file.size) || 0, type: file.mimeType, driveId: file.id }));
     if (!entries.length) {
-      notify("The clips folder in this song's Drive folder is empty.");
+      notify("The clips folder in this song’s Drive folder is empty.");
       return;
     }
     notify('Found ' + entries.length + (entries.length === 1 ? ' file' : ' files') + ' in Google Drive.');
@@ -193,7 +193,7 @@ function openProjectFromDrive() {
     const dir = await SongDrive.subfolder(folder.id, 'projects', { create: false });
     const files = dir ? (await SongDrive.list(dir.id)).filter(file => /\.framecut$/i.test(file.name)) : [];
     if (!files.length) {
-      notify("No projects saved to this song's Drive folder yet.");
+      notify("No projects saved to this song’s Drive folder yet.");
       return;
     }
     files.sort((a, b) => String(b.modifiedTime || '').localeCompare(String(a.modifiedTime || '')));

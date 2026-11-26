@@ -4587,6 +4587,7 @@ $('new').onclick = () => {
   $('project').value = 'Untitled project';
   seek(0);
   refresh();
+  savedProjectState = projectEditState();
 };
 $('import').onclick = () => $('file').click();
 $('importOverlay').onclick = () => $('overlayFile').click();

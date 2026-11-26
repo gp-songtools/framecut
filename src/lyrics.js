@@ -313,6 +313,7 @@ function openLyricsDialog(audio) {
   syncLyricEngine();
   syncSaveTimedLyrics();
   $('lyricsDialog').showModal();
+  if (matchMedia('(pointer: fine)').matches) $('lyricsText').focus();
   renderFramecutSongSpec();
 }
 
