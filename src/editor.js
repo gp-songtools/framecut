@@ -10,13 +10,149 @@ const cutoutLayers = new WeakMap();
 const defaultBackgroundColor = '#1b2635';
 const demo = new Image();
 demo.src = '/* DEMO_IMAGE */';
-assets.set('demo', { name: 'Dolomites at dawn', type: 'image', duration: 30, media: demo, thumb: demo.src });
+assets.set('demo', { name: 'Dolomites at dawn', type: 'image', duration: 36000, media: demo, thumb: demo.src });
+const lyricLines = [
+  [6.5, 10.5, 'Morning breaks on the ridge'], [12, 16, 'Gold spills over the stone'], [17.5, 21.5, 'Mist lifts from the valley floor'],
+  [23, 27, 'We rise above the clouds'], [28.5, 33, 'Every peak is a door'], [35, 39.5, 'Carry the light, carry me home'],
+  [41, 46, 'Above the clouds, we are free']
+];
 const initial = [
-  { id: 'opening', asset: 'demo', track: 'visual', at: 0, start: 0, end: 8, volume: 1 },
-  { id: 'opening-title', track: 'title', text: 'Above the Clouds', at: 0, start: 0, end: 3.6, size: 68 }
+  { id: 'opening', asset: 'demo', track: 'visual', at: 0, start: 0, end: 16, volume: 1,
+    transition: { to: 'push-in', type: 'Cross Dissolve', duration: 1.2 } },
+  { id: 'push-in', asset: 'demo', track: 'visual', at: 16, start: 0, end: 16, volume: 1,
+    effect: 'Soft Glow',
+    overlayKeys: [
+      { at: 0, transform: { overlayX: 50, overlayY: 50, overlaySize: 100, overlayRotation: 0, overlayOpacity: 100 }, easing: 'Ease In/Out' },
+      { at: 16, transform: { overlayX: 46, overlayY: 52, overlaySize: 128, overlayRotation: 0, overlayOpacity: 100 } }],
+    transition: { to: 'golden-hour', type: 'Cross Dissolve', duration: 1.2 } },
+  { id: 'golden-hour', asset: 'demo', track: 'visual', at: 32, start: 0, end: 16, volume: 1,
+    overlayKeys: [
+      { at: 0, transform: { overlayX: 54, overlayY: 50, overlaySize: 124, overlayRotation: 0, overlayOpacity: 100 }, easing: 'Ease In/Out' },
+      { at: 16, transform: { overlayX: 50, overlayY: 50, overlaySize: 100, overlayRotation: 0, overlayOpacity: 100 } }] },
+  { id: 'opening-title', track: 'title', text: 'Above the Clouds', at: 0, start: 0, end: 3.6, size: 68, textIn: 'Slide Up', textOut: 'Slide Up' },
+  ...lyricLines.map(([at, end, text], index) => ({
+    id: 'lyric-' + index, track: 'title', text, at, start: 0, end: end - at, size: 44, textIn: 'Slide Up', textOut: 'Slide Up' })),
+  { id: 'demo-sparkles', track: 'overlay', preset: 'Sparkles', at: 4, start: 0, end: 4,
+    overlayX: 88, overlayY: 20, overlaySize: 30, overlayRotation: 0, overlayOpacity: 100, overlayMotion: '' },
+  { id: 'demo-glow', track: 'effect', effect: 'Light Leaks', at: 26, start: 0, end: 6 }
 ];
 let clips = structuredClone(initial);
 let selected = 'opening';
+
+// Renders the demo song (92 BPM, A minor) with Web Audio, then adds it as an ordinary audio asset and clip.
+async function demoSongWav() {
+  const rate = 44100, seconds = 48, beat = 60 / 92, bar = beat * 4;
+  const context = new OfflineAudioContext(2, rate * seconds, rate);
+  const master = context.createGain();
+  master.gain.value = .8;
+  master.connect(context.destination);
+  const noise = context.createBuffer(1, rate, rate);
+  let seed = 7;
+  for (let i = 0; i < rate; i++) {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    noise.getChannelData(0)[i] = seed / 2147483648 - 1;
+  }
+  const tone = (type, freq, at, length, level, target = master, attack = .01) => {
+    const osc = context.createOscillator(), gain = context.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0, at);
+    gain.gain.linearRampToValueAtTime(level, at + attack);
+    gain.gain.setTargetAtTime(0, at + length * .6, length * .15);
+    osc.connect(gain).connect(target);
+    osc.start(at);
+    osc.stop(at + length);
+  };
+  const hat = (at, level) => {
+    const source = context.createBufferSource(), filter = context.createBiquadFilter(), gain = context.createGain();
+    source.buffer = noise;
+    filter.type = 'highpass';
+    filter.frequency.value = 7000;
+    gain.gain.setValueAtTime(level, at);
+    gain.gain.exponentialRampToValueAtTime(.001, at + .06);
+    source.connect(filter).connect(gain).connect(master);
+    source.start(at, 0, .08);
+  };
+  const kick = (at, level) => {
+    const osc = context.createOscillator(), gain = context.createGain();
+    osc.frequency.setValueAtTime(140, at);
+    osc.frequency.exponentialRampToValueAtTime(42, at + .12);
+    gain.gain.setValueAtTime(level, at);
+    gain.gain.exponentialRampToValueAtTime(.001, at + .32);
+    osc.connect(gain).connect(master);
+    osc.start(at);
+    osc.stop(at + .35);
+  };
+  const hz = note => 440 * 2 ** ((note - 69) / 12);
+  const chords = [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]];
+  const roots = [33, 29, 36, 31];
+  const arpeggio = [0, 1, 2, 1];
+  for (let b = 0; b * bar < seconds; b++) {
+    const start = b * bar, chord = chords[b % 4], root = roots[b % 4];
+    const verse = b >= 4, chorus = b >= 10 && b < 16, outro = b >= 16;
+    const pad = context.createGain();
+    pad.gain.value = chorus ? .09 : .06;
+    pad.connect(master);
+    for (const note of chord) {
+      tone('sawtooth', hz(note), start, bar * 1.05, .5, pad, .4);
+      tone('triangle', hz(note + 12), start, bar * 1.05, .4, pad, .5);
+    }
+    if (verse && !outro) for (let s = 0; s < 8; s++) {
+      tone('sine', hz(root + (s % 2 ? 12 : 0)), start + s * beat / 2, beat * .45, chorus ? .3 : .22);
+    }
+    if (chorus) for (let s = 0; s < 8; s++) {
+      tone('triangle', hz(chord[arpeggio[s % 4]] + 24), start + s * beat / 2, beat * .4, .07);
+    }
+    for (let s = 0; s < 4 && verse && !outro; s++) {
+      kick(start + s * beat, chorus ? .9 : .65);
+      if (chorus && s % 2) kick(start + s * beat + beat * .75, .4);
+    }
+    if (b >= 2) for (let s = 0; s < 8; s++) hat(start + s * beat / 2, (s % 2 ? .1 : .05) * (chorus ? 1.4 : 1));
+  }
+  const buffer = await context.startRendering();
+  const left = buffer.getChannelData(0), right = buffer.getChannelData(1);
+  const fade = rate * 2, total = left.length;
+  const view = new DataView(new ArrayBuffer(44 + total * 4));
+  const text = (offset, value) => [...value].forEach((char, i) => view.setUint8(offset + i, char.charCodeAt(0)));
+  text(0, 'RIFF'); view.setUint32(4, 36 + total * 4, true); text(8, 'WAVEfmt ');
+  view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 2, true);
+  view.setUint32(24, rate, true); view.setUint32(28, rate * 4, true); view.setUint16(32, 4, true); view.setUint16(34, 16, true);
+  text(36, 'data'); view.setUint32(40, total * 4, true);
+  for (let i = 0; i < total; i++) {
+    const gain = Math.min(1, (total - i) / fade);
+    view.setInt16(44 + i * 4, Math.max(-1, Math.min(1, left[i] * gain)) * 32767, true);
+    view.setInt16(46 + i * 4, Math.max(-1, Math.min(1, right[i] * gain)) * 32767, true);
+  }
+  return new Blob([view], { type: 'audio/wav' });
+}
+
+async function addDemoAudio() {
+  if (!globalThis.OfflineAudioContext) return;
+  let url;
+  try {
+    const blob = await demoSongWav();
+    const file = new File([blob], 'Above the Clouds (demo mix).wav', { type: 'audio/wav' });
+    url = URL.createObjectURL(file);
+    const media = document.createElement('audio');
+    await new Promise((resolve, reject) => {
+      media.addEventListener('loadeddata', resolve, { once: true });
+      media.addEventListener('error', reject, { once: true });
+      media.preload = 'auto';
+      media.src = url;
+    });
+    // The user may already have started a new project or opened a file.
+    if (!clips.some(clip => clip.id === 'opening-title')) return URL.revokeObjectURL(url);
+    assets.set('demo-audio', { name: file.name, type: 'audio', media, url, duration: 48, thumb: '', file });
+    clips.push({ id: 'demo-audio-clip', track: 'audio', asset: 'demo-audio', at: 0, start: 0, end: 48, volume: 1,
+      visualizer: { preset: 'equalizer', palette: 'sunset', reactsTo: 'classic', reactivity: 1.4, glow: 12,
+        opacity: .85, width: 1, height: .16, x: 0, y: .42, backdrop: false } });
+    renderBin();
+    refresh();
+  } catch {
+    if (url) URL.revokeObjectURL(url);
+  }
+}
+setTimeout(addDemoAudio, 0);
 let time = 0;
 let playback = null;
 let exporting = null;
@@ -2226,6 +2362,14 @@ const formatTime = value => {
   return pad(Math.floor(hundredths / 6000)) + ':' + pad(Math.floor(hundredths / 100) % 60) + '.' + pad(hundredths % 100);
 };
 
+const ICONS = {
+  play: '<path d="M7 4.5v15l12-7.5z"/>',
+  pause: '<path d="M8 5v14M16 5v14"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'
+};
+const icon = name => '<svg class="i" viewBox="0 0 24 24" aria-hidden="true">' + ICONS[name] + '</svg>';
+
 function notify(message) {
   $('status').textContent = message;
 }
@@ -2260,8 +2404,13 @@ function updatePosition() {
   $('playhead').style.left = time * zoom() + 'px';
   $('clock').textContent = formatTime(time);
   $('duration').textContent = formatTime(duration());
-  $('play').textContent = playback ? '❚❚' : '▶';
-  $('play').setAttribute('aria-label', playback ? 'Pause' : 'Play');
+  const playState = playback ? 'pause' : 'play';
+  if ($('play').dataset.icon !== playState) {
+    $('play').dataset.icon = playState;
+    $('play').innerHTML = icon(playState);
+    $('play').setAttribute('aria-label', playback ? 'Pause' : 'Play');
+    $('play').title = (playback ? 'Pause' : 'Play') + ' (Space)';
+  }
   $('split').disabled = !canSplitClip(active());
   $('effectIntensity')?.syncAtPlayhead();
   $('clipVolume')?.syncAtPlayhead();
@@ -2730,14 +2879,14 @@ function renderBin() {
     } else {
       const placeholder = document.createElement('span');
       placeholder.className = 'thumb';
-      placeholder.textContent = asset.type === 'audio' ? '♫' : '▶';
+      placeholder.innerHTML = icon(asset.type === 'audio' ? 'music' : 'play');
       placeholder.style.cssText = 'display:grid;place-items:center';
       button.append(placeholder);
     }
     const name = document.createElement('span');
     name.textContent = asset.name;
     const plus = document.createElement('span');
-    plus.textContent = '＋';
+    plus.innerHTML = icon('plus');
     button.append(name, plus);
     button.onclick = () => addAsset(assetId);
     bin.append(button);
@@ -3494,7 +3643,7 @@ function inspector() {
     const extract = document.createElement('button');
     extract.type = 'button';
     extract.id = 'extractAudio';
-    extract.textContent = 'Extract Audio';
+    extract.textContent = 'Extract audio';
     extract.onclick = () => extractAudio(clip);
     panel.append(extract);
   }
@@ -3502,7 +3651,7 @@ function inspector() {
     const importLyrics = document.createElement('button');
     importLyrics.type = 'button';
     importLyrics.id = 'importLyrics';
-    importLyrics.textContent = 'Import Lyrics';
+    importLyrics.textContent = 'Import lyrics';
     importLyrics.onclick = () => openLyricsDialog(clip);
     panel.append(importLyrics);
   }
@@ -3827,7 +3976,7 @@ function renderTimeline() {
     button.dataset.id = clip.id;
     button.style.left = clip.at * scale + 'px';
     button.style.width = length(clip) * scale + 'px';
-    if (asset?.thumb) button.style.backgroundImage = 'linear-gradient(90deg,#14271bb8,#18352642),url("' + asset.thumb + '")';
+    if (asset?.thumb) button.style.backgroundImage = 'linear-gradient(90deg,#0b112099,#0b112033),url("' + asset.thumb + '")';
     const label = document.createElement('span');
     label.textContent = asset?.name ?? clip.preset ?? clip.text ?? effectPresetLabel(clip.effect);
     button.title = label.textContent;

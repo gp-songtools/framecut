@@ -96,7 +96,7 @@ function renderFramecutSongSpec() {
     if (title) row.title = title;
     if (used) row.append(make('b', 'In use', 'spec-used'));
     else {
-      const button = make('button', 'Use in Import Lyrics');
+      const button = make('button', 'Use in Import lyrics');
       button.type = 'button';
       button.disabled = !audio && !dialogOpen;
       if (button.disabled) button.title = 'Select an audio clip first';
@@ -133,7 +133,7 @@ function renderFramecutSongSpec() {
     rows.push(row);
   }
   for (const note of spec.stale) rows.push(make('p', note, 'spec-stale'));
-  if (inUse) rows.push(make('p', 'Import Lyrics is using from the song spec: ' + inUse, 'spec-used'));
+  if (inUse) rows.push(make('p', 'Import lyrics is using from the song spec: ' + inUse, 'spec-used'));
   if (!fields.length && !rows.length) {
     box.hidden = true;
     return;

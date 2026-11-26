@@ -135,9 +135,9 @@ function paintWaveform(canvas, peaks, firstTime, lastTime, width, ratio) {
   const center = canvas.height / 2;
   const amplitude = (center - 1) / peaks.peak;
   const step = (lastTime - firstTime) / canvas.width;
-  layer.fillStyle = '#bca5d593';
+  layer.fillStyle = '#99f6e4aa';
   layer.fillRect(0, Math.floor(center), canvas.width, 1);
-  layer.fillStyle = '#d5b9ff';
+  layer.fillStyle = '#5eead4';
   for (let x = 0; x < canvas.width; x++) {
     const first = Math.max(0, Math.floor((firstTime + x * step) * peaks.rate));
     const last = Math.min(peaks.high.length, Math.ceil((firstTime + (x + 1) * step) * peaks.rate));
