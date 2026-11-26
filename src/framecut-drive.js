@@ -145,8 +145,10 @@ async function saveExportToDrive(entry) {
 async function saveExportToDriveAfterExport(entry) {
   try {
     await saveExportToDrive(entry);
+    return true;
   } catch (error) {
     notify(driveError(error) + ' Use Drive › Save last export to Drive to try again.');
+    return false;
   }
 }
 
@@ -235,6 +237,8 @@ function showDriveProjects(files, folderName) {
 function updateDriveMenu() {
   const button = $('driveSaveExport');
   button.disabled = !lastExport;
+  if (lastExport) button.removeAttribute('aria-describedby');
+  else button.setAttribute('aria-describedby', 'driveSaveExportWhy');
   button.title = lastExport ? 'Upload ' + lastExport.name + ' to this song\'s exports folder' : 'Export a video first';
 }
 

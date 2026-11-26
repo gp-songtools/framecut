@@ -166,6 +166,12 @@ function animationSupportsClip(clip, type) {
   return (type !== 'Lens Open' && type !== 'Lens Close') || isImageAnimationClip(clip);
 }
 
+// Display only: sentence case with "and", so group names read the same everywhere.
+function categoryLabel(name) {
+  return name.replace(/ & /g, ' and ').split(' ')
+    .map((word, i) => i && !/\d/.test(word) && word !== word.toUpperCase() ? word.toLowerCase() : word).join(' ');
+}
+
 function animationGroups(property, clip) {
   if (property === 'textLoop') return [
     ['Waves & Floats', textLoopPresets], ['Jitters and Shakes', textJitterLoops], ['Spins and Swings', textSpinLoops],
@@ -409,7 +415,7 @@ function renderAnimationPanel(clip) {
       category.className = 'motion-presets';
       category.open = !index || types.includes(selectedType);
       const summary = document.createElement('summary');
-      summary.textContent = name;
+      summary.textContent = categoryLabel(name);
       const grid = document.createElement('div');
       grid.className = 'transition-presets';
       for (const type of types) grid.append(makeTile(type));
@@ -558,6 +564,7 @@ function openTimelineAnimation(clip, property) {
     previewAnimationEdge(clip, property);
   }
   refresh();
+  if (typeof showMediaTab === 'function') showMediaTab('animations');
   const tile = $('animationPresets').querySelector('[aria-pressed="true"]');
   if (tile) {
     const group = tile.closest('details');

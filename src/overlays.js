@@ -220,7 +220,9 @@ function overlayInspector(clip, section, sliderField) {
     controls.append(button);
     return button;
   };
-  makeButton('previousOverlayKey', '‹', () => jumpToOverlayKey(clip, adjacentOverlayKeys(clip)[0])).ariaLabel = 'Previous transform keyframe';
+  const previousKey = makeButton('previousOverlayKey', '‹', () => jumpToOverlayKey(clip, adjacentOverlayKeys(clip)[0]));
+  previousKey.setAttribute('aria-label', 'Previous keyframe');
+  previousKey.title = 'Previous keyframe';
   makeButton('toggleOverlayKey', 'Add keyframe', () => {
     if (!overlayPlayheadInClip(clip)) return;
     if (playback) pause();
@@ -231,7 +233,9 @@ function overlayInspector(clip, section, sliderField) {
     writeOverlayTransform(clip, at, overlayTransformAt(clip, at), true);
     refresh();
   });
-  makeButton('nextOverlayKey', '›', () => jumpToOverlayKey(clip, adjacentOverlayKeys(clip)[1])).ariaLabel = 'Next transform keyframe';
+  const nextKey = makeButton('nextOverlayKey', '›', () => jumpToOverlayKey(clip, adjacentOverlayKeys(clip)[1]));
+  nextKey.setAttribute('aria-label', 'Next keyframe');
+  nextKey.title = 'Next keyframe';
   section.append(controls);
   section.append(overlayKeyList(clip));
   const row = document.createElement('label');
@@ -240,7 +244,7 @@ function overlayInspector(clip, section, sliderField) {
   const choice = document.createElement('select');
   choice.add(new Option('None', ''));
   for (const motion of overlayMotions) choice.add(new Option(motion));
-  choice.value = clip.overlayMotion;
+  choice.value = clip.overlayMotion ?? '';
   choice.onchange = () => {
     remember();
     clip.overlayMotion = choice.value;

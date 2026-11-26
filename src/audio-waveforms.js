@@ -124,13 +124,14 @@ function addTimelineWaveform(button, clip, asset) {
   canvas.className = 'audio-waveform';
   canvas.setAttribute('aria-hidden', 'true');
   canvas.hidden = true;
+  if (clip.track === 'audio') canvas.dataset.tall = '1';
   button.prepend(canvas);
   timelineWaveforms.push({ canvas, clip, asset });
 }
 
 function paintWaveform(canvas, peaks, firstTime, lastTime, width, ratio) {
   canvas.width = Math.max(1, Math.round(width * ratio));
-  canvas.height = Math.round(14 * ratio);
+  canvas.height = Math.round((canvas.dataset.tall ? 40 : 14) * ratio);
   const layer = canvas.getContext('2d');
   const center = canvas.height / 2;
   const amplitude = (center - 1) / peaks.peak;
