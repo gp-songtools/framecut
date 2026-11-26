@@ -63,6 +63,10 @@ input[type=checkbox]{width:16px;height:16px;vertical-align:-3px;margin:0 6px 0 0
 input::placeholder,textarea::placeholder{color:var(--muted);opacity:1}
 .field{display:grid;grid-template-columns:1fr 84px;align-items:center;gap:var(--s-2);margin:var(--s-2) 0;color:var(--muted)}
 .field>input,.field>select{width:100%}
+.field:has(>select){grid-template-columns:minmax(0,2fr) minmax(0,3fr)}
+.field:has(>select)>select{text-overflow:ellipsis}
+.field.stacked-field{grid-template-columns:minmax(0,1fr);align-items:stretch;gap:var(--s-1)}
+.field.stacked-field>textarea{min-height:calc(3 * 1.45em + 10px);resize:vertical}
 
 /* App frame */
 body{display:grid;grid-template-rows:auto minmax(0,1fr) auto auto}
@@ -70,7 +74,7 @@ body{display:grid;grid-template-rows:auto minmax(0,1fr) auto auto}
 header{display:flex;align-items:center;gap:var(--s-3);height:56px;padding:0 var(--s-4);background:var(--panel);border-bottom:1px solid var(--line)}
 .brand{display:flex;align-items:center;gap:10px;font:600 var(--fs-xl)/1 var(--font-head);letter-spacing:-.01em;white-space:nowrap}
 .mark,.mark svg{display:block;width:32px;height:32px}
-.project{flex:0 1 300px;min-width:0;margin-left:var(--s-2);padding:4px 32px 4px 10px;border:1px solid transparent;border-radius:var(--r-sm);background:transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A7B3C6' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z'/%3E%3C/svg%3E") no-repeat right 10px center/14px;color:var(--ink);font:600 var(--fs-lg)/1.3 var(--font-head);letter-spacing:-.01em;text-align:left;text-overflow:ellipsis}
+.project{field-sizing:content;flex:0 1 auto;min-width:calc(8ch + 42px);max-width:calc(32ch + 42px);margin-left:var(--s-2);padding:4px 32px 4px 10px;border:1px solid transparent;border-radius:var(--r-sm);background:transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A7B3C6' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z'/%3E%3C/svg%3E") no-repeat right 10px center/14px;color:var(--ink);font:600 var(--fs-lg)/1.3 var(--font-head);letter-spacing:-.01em;text-align:left;text-overflow:ellipsis}
 .project:hover{border-color:var(--line-ctl);background-color:var(--panel-2)}
 .project:focus{border-color:var(--accent);background-color:var(--panel-2)}
 @media(prefers-color-scheme:light){.project{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z'/%3E%3C/svg%3E")}}
@@ -95,10 +99,11 @@ header button,.drive-menu summary{white-space:nowrap}
 .section{margin-top:var(--s-4);padding-top:var(--s-4);border-top:1px solid var(--line)}
 .section h3,.panel h3,.spec-in h3{margin:0 0 var(--s-2);font:700 var(--fs-sm)/1.3 var(--font-body);color:var(--muted);text-transform:none;letter-spacing:0}
 /* Media column tabs. Only the tabs that map to a track carry its colour dot (Stickers = Overlay, Effects = Effects). */
-.media-tabs{position:sticky;top:44px;z-index:2;display:flex;flex-wrap:wrap;gap:var(--s-1);margin:0 calc(var(--s-4) * -1) var(--s-2);padding:var(--s-1) var(--s-4) var(--s-2);background:var(--panel)}
-.media-tabs button{flex:1 1 auto;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:32px;padding:4px 8px;background:transparent;border-color:var(--line);font-size:var(--fs-xs);white-space:nowrap}
+.media-tabs{position:sticky;top:44px;z-index:2;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:var(--s-1);margin:0 calc(var(--s-4) * -1) var(--s-2);padding:var(--s-1) var(--s-4) var(--s-2);background:var(--panel)}
+.media-tabs button{grid-column:span 2;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:32px;padding:4px 8px;background:transparent;border-color:var(--line);font-size:var(--fs-xs);white-space:nowrap}
 .media-tabs button[style*="--tc"]::before{content:"";flex:none;width:8px;height:8px;border-radius:2px;background:var(--tc)}
-.media-tabs button[aria-selected=true]{background:color-mix(in srgb,var(--accent) 20%,var(--raised));border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);color:var(--ink)}
+.media-tabs button:nth-child(n+4){grid-column:span 3}
+.media-tabs button[aria-selected=true]{font-weight:700;background:color-mix(in srgb,var(--accent) 20%,var(--raised));border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);color:var(--ink)}
 .media-pane>.section:first-child{margin-top:0;padding-top:0;border-top:0}
 .media-pane>.section:first-child>.title{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 #assetCount{font-size:var(--fs-xs)}
@@ -344,7 +349,7 @@ header button,.drive-menu summary{white-space:nowrap}
 .transition-resize{position:absolute;left:-5px;top:-2px;width:10px;height:21px;cursor:ew-resize;padding:0;border:1px solid var(--accent);border-radius:3px;background:color-mix(in srgb,var(--accent) 40%,var(--panel));pointer-events:auto;touch-action:none}
 .clip-animation-spans{position:absolute;top:19px;height:15px;z-index:3;pointer-events:none}
 .lane[data-track=title] .clip-animation-spans{top:30px}
-.clip-animation-span{position:absolute;container-type:inline-size;top:0;height:15px;border:1px solid var(--t-text);border-radius:3px;background:color-mix(in srgb,var(--t-text) 28%,var(--panel));color:var(--ink)}
+.clip-animation-span{position:absolute;container-type:inline-size;top:0;height:15px;border:1px solid color-mix(in srgb,var(--t-text) 70%,transparent);border-radius:3px;background:color-mix(in srgb,var(--t-text) 28%,var(--panel));color:var(--ink)}
 .clip-animation-label{display:block;width:100%;height:13px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 8px;border:0;border-radius:2px;background:transparent;color:inherit;text-align:left;font:700 var(--fs-xs)/13px var(--font-body);pointer-events:auto}
 @container (max-width:72px){
 .clip-animation-label{position:relative;padding:0;overflow:hidden;text-indent:-9999px;text-overflow:clip}
@@ -352,7 +357,10 @@ header button,.drive-menu summary{white-space:nowrap}
 .outgoing .clip-animation-label::before{-webkit-mask-image:var(--arrow-out);mask-image:var(--arrow-out)}
 }
 .clip-animation-label:hover:not(:disabled){background:color-mix(in srgb,var(--t-text) 30%,transparent);border:0}
-.clip-animation-resize{position:absolute;right:0;top:-1px;height:15px;width:7px;border:0;border-radius:2px;padding:0;background:var(--t-text);pointer-events:auto;cursor:ew-resize;touch-action:none}
+.clip-animation-resize{position:absolute;right:0;top:-1px;height:15px;width:6px;border:0;border-radius:3px;padding:0;background:color-mix(in srgb,var(--t-text) 55%,transparent);pointer-events:auto;cursor:ew-resize;touch-action:none}
+.clip-animation-resize::after{content:"";position:absolute;top:-5px;bottom:-5px;left:-9px;right:-9px}
+.clip.selected .clip-animation-resize,.clip-animation-span:hover .clip-animation-resize{background:var(--t-text)}
+.clip.title-clip>span{margin-left:8px}
 .clip-animation-span.outgoing .clip-animation-resize{right:auto;left:0}
 .clip-animation-resize:hover,.clip-animation-resize:focus-visible{background:var(--ink)}
 .clip-animation-badge{position:absolute;z-index:2;top:4px;height:16px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 5px;border:1px solid var(--t-text);border-radius:3px;background:color-mix(in srgb,var(--t-text) 28%,var(--panel));color:var(--ink);font:700 var(--fs-xs)/14px var(--font-body)}
@@ -453,7 +461,6 @@ kbd{display:inline-block;min-width:24px;padding:1px 6px;border:1px solid var(--l
 .panel>.title,.panel>.row,.panel>.row>.title{margin-inline:calc(var(--s-3) * -1);padding-inline:var(--s-3)}
 .panel>.row>.title{margin:0;padding:0}
 .toolbar{padding-inline:var(--s-3)}
-.project{flex-basis:120px}
 .media-tabs{margin-inline:calc(var(--s-3) * -1);padding-inline:var(--s-3)}
 .header-actions>button,.drive-menu summary{padding-inline:8px}
 }
@@ -466,7 +473,7 @@ body{display:flex;flex-direction:column;height:auto;min-height:100vh}
 header{order:0;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"brand export" "project project" "actions actions";height:auto;gap:var(--s-2);padding:var(--s-2) var(--s-3)}
 .header-right{display:contents}
 .brand{grid-area:brand;font-size:var(--fs-lg)}
-.project{grid-area:project;flex:none;width:100%;margin:0;font-size:var(--fs-md);border-color:var(--line)}
+.project{grid-area:project;flex:none;justify-self:start;margin:0;font-size:var(--fs-md);border-color:var(--line)}
 .header-actions{grid-area:actions;gap:2px;padding:2px;overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-md);background:var(--panel-2);scrollbar-width:none}
 .header-actions>button,.drive-menu{flex:none}
 .drive-menu{position:static}
@@ -501,8 +508,7 @@ header{order:0;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-templa
 .media{order:4;border-right:0;border-top:1px solid var(--line);overflow:visible}
 footer.foot{order:5}
 .panel>.title,.panel>.row{position:static}
-.media-tabs{position:static;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}
-.media-tabs button{flex:none}
+.media-tabs{position:static}
 .panel>.title,.panel>.row,.panel>.row>.title{margin-inline:calc(var(--s-3) * -1)}
 .panel>.row>.title{margin:0}
 .field{grid-template-columns:1fr 96px}
@@ -534,9 +540,9 @@ button{min-height:36px}
 <div class="media-tabs" id="mediaTabs" role="tablist" aria-label="Media library sections">
 <button type="button" role="tab" id="mediaTab-media" data-tab="media" aria-controls="mediaPane-media" aria-selected="true">Media</button>
 <button type="button" role="tab" id="mediaTab-stickers" data-tab="stickers" aria-controls="mediaPane-stickers" aria-selected="false" tabindex="-1" style="--tc:var(--t-overlay)">Stickers</button>
+<button type="button" role="tab" id="mediaTab-effects" data-tab="effects" aria-controls="mediaPane-effects" aria-selected="false" tabindex="-1" style="--tc:var(--t-fx)">Effects</button>
 <button type="button" role="tab" id="mediaTab-animations" data-tab="animations" aria-controls="mediaPane-animations" aria-selected="false" tabindex="-1">Animations</button>
 <button type="button" role="tab" id="mediaTab-transitions" data-tab="transitions" aria-controls="mediaPane-transitions" aria-selected="false" tabindex="-1">Transitions</button>
-<button type="button" role="tab" id="mediaTab-effects" data-tab="effects" aria-controls="mediaPane-effects" aria-selected="false" tabindex="-1" style="--tc:var(--t-fx)">Effects</button>
 </div>
 <div class="media-pane" id="mediaPane-media" role="tabpanel" aria-labelledby="mediaTab-media"><button id="import"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Import media</button><input id="file" type="file" accept="video/*,image/*,audio/*" multiple hidden><button id="placeClips" type="button" aria-describedby="placeClipsHint">Place clips…</button><button id="placeClipsDrive" type="button" hidden>Place clips from Drive…</button><p id="placeClipsHint" class="secondary" role="status" hidden></p><div class="bin" id="bin"></div>
 <section class="section" id="songSpecPanel" aria-label="Song spec">

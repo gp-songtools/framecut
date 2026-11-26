@@ -3776,7 +3776,7 @@ function inspector() {
   if (clip.track === 'visual') panel.append(backgroundInspector(clip));
   if (clip.track === 'title') {
     const copyLabel = document.createElement('label');
-    copyLabel.className = 'field';
+    copyLabel.className = 'field stacked-field';
     copyLabel.textContent = 'Text';
     const copy = document.createElement('textarea');
     copy.rows = 3;

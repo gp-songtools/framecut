@@ -3,9 +3,9 @@
 const MEDIA_TABS = {
   media: 'Media',
   stickers: 'Stickers and overlays',
+  effects: 'Effects',
   animations: 'Animations',
-  transitions: 'Transitions',
-  effects: 'Effects'
+  transitions: 'Transitions'
 };
 const MEDIA_TAB_KEY = 'framecut.mediaTab';
 
@@ -16,7 +16,6 @@ function showMediaTab(name, { focus = false } = {}) {
     tab.setAttribute('aria-selected', String(on));
     tab.tabIndex = on ? 0 : -1;
     if (on && focus) tab.focus();
-    if (on) tab.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
   }
   for (const pane of document.querySelectorAll('#media .media-pane')) pane.hidden = pane.id !== 'mediaPane-' + name;
   document.getElementById('mediaTitle').textContent = MEDIA_TABS[name];
