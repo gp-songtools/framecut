@@ -169,12 +169,13 @@ const length = clip => clip.end - clip.start;
 const duration = () => Math.max(0, ...clips.map(clip => clip.at + length(clip)));
 const zoom = () => Number($('zoom').value);
 let zoomChosen = false;
-function fitZoom() {
+const minAutoZoom = 28;
+function fitZoom(full) {
   const total = duration();
   const room = $('scroll').clientWidth;
   if (!total || room <= 0) return;
   const slider = $('zoom');
-  slider.value = clamp(Math.floor(room / (total + 2) * 10) / 10, Number(slider.min), Number(slider.max));
+  slider.value = clamp(Math.max(Math.floor(room / (total + 2) * 10) / 10, full || room >= 700 ? 0 : minAutoZoom), Number(slider.min), Number(slider.max));
 }
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const active = () => clips.find(clip => clip.id === selected);
@@ -4633,12 +4634,19 @@ $('lanes').onclick = event => {
 };
 connectTimelineRange();
 connectTrackMixer();
+{
+  const bar = document.querySelector('.timeline .toolbar');
+  const sync = () => bar.classList.toggle('can-scroll-right', bar.scrollLeft + bar.clientWidth < bar.scrollWidth - 4);
+  bar.addEventListener('scroll', sync, { passive: true });
+  window.addEventListener('resize', sync);
+  setTimeout(sync, 0);
+}
 $('zoom').oninput = () => {
   zoomChosen = true;
   refresh();
 };
 $('zoomFit').onclick = () => {
-  fitZoom();
+  fitZoom(true);
   zoomChosen = false;
   refresh();
 };

@@ -68,6 +68,8 @@ input[type=checkbox]{width:16px;height:16px;vertical-align:-3px;margin:0 6px 0 0
 input::placeholder,textarea::placeholder{color:var(--muted);opacity:1}
 .field{display:grid;grid-template-columns:1fr 84px;align-items:center;gap:var(--s-2);margin:var(--s-2) 0;color:var(--muted)}
 .field>input,.field>select{width:100%}
+.field:has(>input[type=checkbox]:first-child){display:flex;align-items:center;gap:var(--s-2);min-height:28px;cursor:pointer;color:var(--ink)}
+.field:has(>input[type=checkbox]:first-child)>input{width:16px;flex:none;margin:0}
 .field:has(>select){grid-template-columns:minmax(0,2fr) minmax(0,3fr)}
 .field:has(>select)>select{text-overflow:ellipsis}
 .field.stacked-field{grid-template-columns:minmax(0,1fr);align-items:stretch;gap:var(--s-1)}
@@ -436,7 +438,9 @@ small{font-size:var(--fs-sm)}
 #lyricsKeyStatus:empty{display:none}
 #lyricsMessage{color:var(--warn)}
 #lyricsMessage:empty{display:none}
-#lyricsActions{margin-top:var(--s-3);flex-wrap:wrap}
+#lyricsActions{margin-top:var(--s-3);flex-wrap:wrap;justify-content:space-between;row-gap:var(--s-2)}
+.lyrics-secondary{display:flex;flex-wrap:wrap;gap:var(--s-2)}
+.lyrics-primary{display:flex;flex:none;gap:var(--s-2);margin-left:auto}
 #lyricsSongSpecHint{overflow-wrap:anywhere}
 #animationMenu,#cutMenu{position:fixed;inset:auto;margin:0;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-pop)}
 #animationMenu{padding:var(--s-2);min-width:200px}
@@ -498,6 +502,8 @@ header{order:0;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-templa
 .tracks>div{padding-left:var(--s-2)}
 .toolbar{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;padding:var(--s-2) var(--s-3);scrollbar-width:thin;scrollbar-color:var(--line-ctl) transparent}
 .toolbar>*{flex:none}
+.toolbar::after{content:"";flex:none;width:var(--s-3)}
+.toolbar.can-scroll-right{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 36px),transparent)}
 .tb-group{flex-wrap:nowrap}
 .tb-group+.tb-group{padding-left:var(--s-2);border-left:1px solid var(--line)}
 .zoom-group{margin-left:0}
@@ -627,6 +633,7 @@ button{min-height:36px}
 <dialog id="driveProjectsDialog" aria-labelledby="driveProjectsHeading">
   <h2 id="driveProjectsHeading">Open project from Drive</h2>
   <p id="driveProjectsFolder" class="secondary"></p>
+  <p id="driveProjectsStatus" class="secondary" role="status">Looking for projects in Google Drive…</p>
   <ul id="driveProjectsList"></ul>
   <div class="row" style="justify-content:flex-end;margin-top:16px"><button id="driveProjectsCancel" type="button">Cancel</button></div>
 </dialog>
@@ -671,11 +678,10 @@ button{min-height:36px}
     </fieldset>
     <p id="lyricsMessage" role="status"></p>
     <div class="row" id="lyricsActions">
-      <button id="chooseLyricsFile" type="button">Open lyrics file</button>
-      <button id="saveTimedLyrics" type="button" disabled title="Times are taken from the lyrics box. Use the full song audio so they match song time.">Save timed lyrics to song spec</button>
-      <span class="spacer"></span>
-      <button id="cancelLyrics" type="button">Cancel</button>
-      <button id="applyLyrics" type="submit" class="accent">Import lyrics</button>
+      <span class="lyrics-secondary"><button id="chooseLyricsFile" type="button">Open lyrics file</button>
+      <button id="saveTimedLyrics" type="button" disabled title="Times are taken from the lyrics box. Use the full song audio so they match song time.">Save timed lyrics to song spec</button></span>
+      <span class="lyrics-primary"><button id="cancelLyrics" type="button">Cancel</button>
+      <button id="applyLyrics" type="submit" class="accent">Import lyrics</button></span>
     </div>
   </form>
 </dialog>

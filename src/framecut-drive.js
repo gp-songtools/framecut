@@ -194,6 +194,7 @@ function openProjectFromDrive() {
     const files = dir ? (await SongDrive.list(dir.id)).filter(file => /\.framecut$/i.test(file.name)) : [];
     if (!files.length) {
       notify("No projects saved to this song’s Drive folder yet.");
+      showDriveProjects([], folder.name);
       return;
     }
     files.sort((a, b) => String(b.modifiedTime || '').localeCompare(String(a.modifiedTime || '')));
@@ -205,6 +206,7 @@ function openProjectFromDrive() {
 function showDriveProjects(files, folderName) {
   const list = $('driveProjectsList');
   $('driveProjectsFolder').textContent = 'GP Song Tools / ' + folderName + ' / projects';
+  $('driveProjectsStatus').textContent = files.length ? '' : "No Framecut projects in this song's Drive folder yet. Use Drive › Save project to Drive to add one.";
   list.replaceChildren(...files.map(file => {
     const item = document.createElement('li');
     const button = document.createElement('button');
