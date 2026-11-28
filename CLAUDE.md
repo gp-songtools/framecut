@@ -27,6 +27,7 @@
 - Use `clip.at` for timeline position and `clip.start` / `clip.end` for source in/out in seconds. Convert with `clip.start + position - clip.at`.
 - Use `snapshot()` / `remember()` for undoable edits. History clones clips and stores aspect ratio and track mix. Assets stay available across undo/redo.
 - Use `refresh()` when an edit needs to update timeline, Inspector, and preview. Use `renderFrame()` as the shared compositing path for preview and export.
+- Cut transitions draw the incoming clip from a per-clip muted clone (`incomingClones` in `editor.js`) that plays in sync during the window, is seeked before drawing, and falls back to its last good frame, so a transition frame is never dropped. `updateIncomingWindow()` keeps at most 4 clones alive near the playhead (4 s lookahead while playing or exporting).
 - Keep cut transitions separate from clip animations. Cut transitions belong to adjacent visual clips. `animation-panel.js` handles presets, previews, drag/drop, timeline spans, and clipboard actions.
 - Keep text In, Out, and Loop in `text-animations.js` and `text-atmosphere.js`. Video and image clips use In, Out, and Combo.
 - Reuse `overlays.js` for layer transforms and `preset-controls.js` for per-preset settings. Keep draggable timeline diamonds and Inspector lists in sync with source-time keyframes.

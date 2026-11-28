@@ -896,7 +896,6 @@ function beatProgress(visual, next, span) {
   return beat;
 }
 const transitionFrames = new WeakMap();
-const slowMotionMedia = new WeakMap();
 const slowMotionProgress = progress => progress * (1 - .3 * progress);
 const transitionLayer = document.createElement('canvas');
 const transitionContext = transitionLayer.getContext('2d');
@@ -904,7 +903,6 @@ const lumaMask = document.createElement('canvas');
 lumaMask.width = 96;
 lumaMask.height = 54;
 const lumaContext = lumaMask.getContext('2d', { willReadFrequently: true });
-const transitionMedia = new WeakMap();
 
 function nextVisual(clip, order = videoTrackOrder()) {
   const next = order[order.indexOf(clip) + 1];
@@ -937,7 +935,6 @@ function setCutTransition(clip, next, type, duration) {
   remember();
   if (type) {
     clip.transition = { to: next.id, type, duration };
-    incomingMedia(assets.get(next.asset));
   } else {
     delete clip.transition;
   }
@@ -989,20 +986,216 @@ function editOpenCut(type, duration) {
   syncCutMenu();
 }
 
-function incomingMedia(asset, cache = transitionMedia) {
-  if (asset.type === 'image') return asset.media;
-  if (!cache.has(asset)) {
+// Per-clip clones used to draw the incoming side of a cut (key 'in:<clip id>') and the remapped
+// outgoing side of Speed Ramp / Slow-Motion Blur (key 'slow:<clip id>'). Each entry keeps a
+// last-good-frame canvas so a seek in flight never drops or stutters the transition.
+const incomingClones = new Map();
+const incomingLead = 1.5;
+
+function releaseIncoming(key) {
+  const entry = incomingClones.get(key);
+  if (!entry) return;
+  entry.live = false;
+  entry.media.pause();
+  entry.media.removeAttribute('src');
+  entry.media.load();
+  incomingClones.delete(key);
+}
+
+function incomingMedia(asset, key) {
+  if (asset.type !== 'video') return null;
+  let entry = incomingClones.get(key);
+  if (entry && entry.asset !== asset) {
+    releaseIncoming(key);
+    entry = null;
+  }
+  if (!entry) {
     const media = asset.media.cloneNode();
     media.preload = 'auto';
     media.muted = true;
-    for (const event of ['loadeddata', 'seeked']) {
-      media.addEventListener(event, () => {
-        if (!playback && !exporting) draw();
-      });
-    }
-    cache.set(asset, media);
+    const frame = document.createElement('canvas');
+    frame.readyState = 4;
+    entry = { asset, media, frame, frameContext: frame.getContext('2d'), hasFrame: false, live: false, target: 0, targetAt: 0, seekTo: -1, capturedAt: -1 };
+    Object.defineProperty(frame, 'currentTime', { get: () => media.currentTime });
+    media.addEventListener('loadeddata', () => {
+      if (!playback && !exporting) draw();
+    });
+    media.addEventListener('seeked', () => {
+      if (incomingClones.get(key) !== entry) return;
+      if (entry.live) {
+        // Apply the latest target that arrived while this seek was pending.
+        const latest = entry.target + (performance.now() - entry.targetAt) / 1000 * media.playbackRate;
+        if (Math.abs(media.currentTime - latest) > .08) {
+          entry.seekTo = latest;
+          media.currentTime = latest;
+        }
+      } else if (!playback && !exporting) {
+        draw();
+      }
+    });
+    incomingClones.set(key, entry);
   }
-  return cache.get(asset);
+  return entry;
+}
+
+function captureIncoming(entry) {
+  const media = entry.media;
+  if (media.readyState < 2 || media.seeking || !media.videoWidth || entry.capturedAt === media.currentTime) return;
+  const scale = Math.min(1, 1920 / Math.max(media.videoWidth, media.videoHeight));
+  const width = Math.round(media.videoWidth * scale);
+  const height = Math.round(media.videoHeight * scale);
+  const frame = entry.frame;
+  if (frame.width !== width || frame.height !== height) {
+    frame.width = frame.videoWidth = width;
+    frame.height = frame.videoHeight = height;
+  }
+  entry.frameContext.drawImage(media, 0, 0, width, height);
+  entry.capturedAt = media.currentTime;
+  entry.hasFrame = true;
+}
+
+// Fresh frame when the clone has one, otherwise the last good frame; null only before any frame exists.
+function incomingSource(entry) {
+  captureIncoming(entry);
+  return entry.hasFrame ? entry.frame : null;
+}
+
+// Keep a clone on the source time for this timeline position. While playing it plays muted and is drift-corrected
+// like the main element; while paused it is seeked (before drawing) and stays paused.
+function syncIncoming(entry, rawTarget, playing, rate = 1) {
+  const media = entry.media;
+  const target = clamp(rawTarget, 0, Number.isFinite(media.duration) ? media.duration : Infinity);
+  playing = playing && rawTarget > .001;
+  entry.live = playing;
+  entry.target = target;
+  entry.targetAt = performance.now();
+  if (media.playbackRate !== rate) media.playbackRate = rate;
+  const tolerance = playing ? .08 : .025;
+  if (Math.abs(media.currentTime - target) > tolerance && (!media.seeking || !playing && Math.abs(entry.seekTo - target) > tolerance)) {
+    entry.seekTo = target;
+    media.currentTime = target;
+  }
+  if (playing) {
+    if (media.paused) media.play().catch(() => {});
+  } else if (!media.paused) {
+    media.pause();
+  }
+  captureIncoming(entry);
+}
+
+// Only cuts near the playhead keep live clones: windows that start within the lookahead (4 s playing or
+// exporting, 2 s paused) or are still in progress / handing off, nearest first, at most incomingCap clones.
+const incomingCap = 4;
+let transitionCuts = [];
+let transitionCutsKey = NaN;
+const nearCuts = [null, null, null, null];
+const nearDist = [0, 0, 0, 0];
+const wantedCuts = [null, null, null, null];
+let wantedCount = 0;
+let wantedStamp = '';
+
+function transitionCutsSignature() {
+  let sum = clips.length;
+  for (const clip of clips) {
+    if (clip.track !== 'visual') continue;
+    sum = sum * 31 % 1e9 + clip.at * 7 + clip.start * 3 + clip.end + (clip.transition ? clip.transition.duration + clip.transition.type.length + 5 : 0);
+  }
+  return sum + assets.size;
+}
+
+function rebuildTransitionCuts() {
+  transitionCuts = [];
+  const order = videoTrackOrder();
+  for (const clip of order) {
+    const next = clip.transition && nextVisual(clip, order);
+    const setting = next && cutTransition(clip, next);
+    if (!setting) continue;
+    const span = transitionDuration(clip, next, setting.duration);
+    const cut = { ws: next.at - span, we: next.at + 1, inKey: 'in:' + next.id, inAsset: assets.get(next.asset),
+      inAt: Math.max(0, next.start - span), slowKey: '', slowAsset: null, slowAt: 0, count: 1, stamp: next.id };
+    if (setting.type === 'Speed Ramp' || setting.type === 'Slow-Motion Blur') {
+      cut.slowKey = 'slow:' + clip.id;
+      cut.slowAsset = assets.get(clip.asset);
+      cut.slowAt = Math.max(0, clip.end - span);
+      cut.count = 2;
+    }
+    transitionCuts.push(cut);
+  }
+}
+
+function updateIncomingWindow(position, fast = false, force = false) {
+  const signature = transitionCutsSignature();
+  if (signature !== transitionCutsKey) {
+    transitionCutsKey = signature;
+    rebuildTransitionCuts();
+    force = true;
+  }
+  const horizon = position + (fast ? 4 : 2);
+  let found = 0;
+  for (const cut of transitionCuts) {
+    if (cut.ws > horizon || cut.we < position) continue;
+    const dist = cut.ws > position ? cut.ws - position : 0;
+    if (found === incomingCap && dist >= nearDist[found - 1]) continue;
+    let index = found < incomingCap ? found++ : found - 1;
+    while (index > 0 && nearDist[index - 1] > dist) {
+      nearCuts[index] = nearCuts[index - 1];
+      nearDist[index] = nearDist[index - 1];
+      index--;
+    }
+    nearCuts[index] = cut;
+    nearDist[index] = dist;
+  }
+  let used = 0;
+  let count = 0;
+  let stamp = '';
+  for (let i = 0; i < found; i++) {
+    const cut = nearCuts[i];
+    if (used + cut.count > incomingCap) continue;
+    used += cut.count;
+    wantedCuts[count++] = cut;
+    stamp += cut.stamp + ',';
+  }
+  if (!force && stamp === wantedStamp) return;
+  wantedStamp = stamp;
+  wantedCount = count;
+  for (const key of [...incomingClones.keys()]) {
+    let keep = false;
+    for (let i = 0; i < count; i++) if (wantedCuts[i].inKey === key || wantedCuts[i].slowKey === key) keep = true;
+    if (!keep) releaseIncoming(key);
+  }
+  for (let i = 0; i < count; i++) {
+    const cut = wantedCuts[i];
+    const idle = position < cut.ws - incomingLead;
+    const warm = (key, asset, at) => {
+      const entry = asset && incomingMedia(asset, key);
+      if (entry && idle && Math.abs(entry.media.currentTime - at) > .025) {
+        entry.seekTo = at;
+        entry.media.currentTime = at;
+      }
+    };
+    warm(cut.inKey, cut.inAsset, cut.inAt);
+    if (cut.slowKey) warm(cut.slowKey, cut.slowAsset, cut.slowAt);
+  }
+}
+
+function prewarmTransitions() {
+  updateIncomingWindow(time, Boolean(playback), true);
+}
+
+function warmTransitions(timeout = 3000) {
+  updateIncomingWindow(0, true, true);
+  const waits = [...incomingClones.values()].map(entry => new Promise(resolve => {
+    const media = entry.media;
+    const check = () => {
+      if (media.readyState < 2 || media.seeking) return;
+      captureIncoming(entry);
+      for (const event of ['seeked', 'loadeddata', 'canplay']) media.removeEventListener(event, check);
+      resolve();
+    };
+    for (const event of ['seeked', 'loadeddata', 'canplay']) media.addEventListener(event, check);
+    check();
+  }));
+  return Promise.race([Promise.all(waits), new Promise(resolve => setTimeout(resolve, timeout))]);
 }
 
 const keyframeEasings = {
@@ -2432,11 +2625,8 @@ function updatePosition() {
   $('clipVolume')?.syncAtPlayhead();
 }
 
-function seekTransitionMedia(media, time) {
-  if (media.readyState >= 1 && !media.seeking && Math.abs(media.currentTime - time) > .025) media.currentTime = time;
-}
-
 function renderFrame(position, running = false, preciseSeek = false) {
+  updateIncomingWindow(position, running || Boolean(playback) || Boolean(exporting));
   let visual;
   const titles = [];
   const overlays = [];
@@ -2473,6 +2663,48 @@ function renderFrame(position, running = false, preciseSeek = false) {
     if (running && media.paused) media.play().catch(() => {});
     if (!running) media.pause();
   }
+  const playingIncoming = running && !preciseSeek;
+  const liveIncoming = new Set();
+  const nextAsset = setting && assets.get(next.asset);
+  const remap = setting?.type === 'Speed Ramp' ? tempoProgress
+    : setting?.type === 'Slow-Motion Blur' ? slowMotionProgress : null;
+  let incoming;
+  let slowEntry;
+  let slowTime;
+  if (setting && remaining <= transitionLength + incomingLead) {
+    // Seek or play the clones before drawing so the frame matches this position.
+    incoming = nextAsset && incomingMedia(nextAsset, 'in:' + next.id);
+    if (incoming) {
+      liveIncoming.add(incoming);
+      syncIncoming(incoming, next.start - remaining, playingIncoming);
+    }
+    if (remap && visibleAsset?.type === 'video') {
+      const elapsed = position - visual.at;
+      slowEntry = incomingMedia(visibleAsset, 'slow:' + visual.id);
+      const low = Math.max(0, progress - .01);
+      const high = Math.min(1, progress + .01);
+      slowTime = Math.max(0, visual.start + elapsed - transitionLength * (progress - remap(progress)));
+      liveIncoming.add(slowEntry);
+      syncIncoming(slowEntry, slowTime, playingIncoming, clamp((remap(high) - remap(low)) / (high - low), .25, 4));
+    }
+  }
+  // Just after a cut the incoming clip's own element may still be seeking: keep drawing from its transition clone.
+  let handoff;
+  if (visual && visibleAsset?.type === 'video' && position - visual.at < 1) {
+    const entry = incomingClones.get('in:' + visual.id);
+    const wanted = visual.start + position - visual.at;
+    const main = visibleAsset.media;
+    if (entry && entry.asset === visibleAsset && (main.seeking || main.readyState < 2 || Math.abs(main.currentTime - wanted) > .1)) {
+      handoff = entry;
+      liveIncoming.add(entry);
+      syncIncoming(entry, wanted, playingIncoming);
+    }
+  }
+  for (const entry of incomingClones.values()) {
+    if (liveIncoming.has(entry)) continue;
+    entry.live = false;
+    if (!entry.media.paused) entry.media.pause();
+  }
   if (preciseSeek && !running && visibleAsset?.type === 'video' && visibleAsset.media.seeking) return;
   context.clearRect(0, 0, canvas.width, canvas.height);
   if (!exporting?.transparent) {
@@ -2481,37 +2713,31 @@ function renderFrame(position, running = false, preciseSeek = false) {
   }
   if (visibleAsset) {
     const elapsed = position - visual.at;
-    let slowFrame;
-    const remap = setting?.type === 'Speed Ramp' ? tempoProgress
-      : setting?.type === 'Slow-Motion Blur' ? slowMotionProgress : null;
-    if (visibleAsset.type === 'video' && remap && remaining <= transitionLength + .5) {
-      slowFrame = incomingMedia(visibleAsset, slowMotionMedia);
-      const sourceTime = visual.start + elapsed - transitionLength * (progress - remap(progress));
-      seekTransitionMedia(slowFrame, sourceTime);
-    }
+    const slowFrame = slowEntry && incomingSource(slowEntry);
     const drewSlowFrame = progress > 0 && slowFrame && drawVisualClip(context, slowFrame, visual, elapsed, matteOnly);
-    if (!drewSlowFrame) drawVisualClip(context, visibleAsset.media, visual, elapsed, matteOnly);
+    const handoffFrame = !drewSlowFrame && handoff && incomingSource(handoff);
+    if (!drewSlowFrame && !(handoffFrame && drawVisualClip(context, handoffFrame, visual, elapsed, matteOnly))) {
+      drawVisualClip(context, visibleAsset.media, visual, elapsed, matteOnly);
+    }
   }
   if (matteOnly) return;
   if (setting && remaining <= transitionLength + .5) {
-    const asset = assets.get(next.asset);
-    const media = incomingMedia(asset);
-    if (progress > 0) {
+    const asset = nextAsset;
+    if (progress > 0 && remaining <= transitionLength + .5) {
       if (transitionLayer.width !== canvas.width || transitionLayer.height !== canvas.height) {
         transitionLayer.width = canvas.width;
         transitionLayer.height = canvas.height;
       }
       transitionContext.fillStyle = '#08090b';
       transitionContext.fillRect(0, 0, canvas.width, canvas.height);
-      if (drawVisualClip(transitionContext, media, next, 0, false, false)) {
+      const source = incoming ? incomingSource(incoming) : asset.media;
+      if (source && drawVisualClip(transitionContext, source, next, 0, false, false)) {
         const inputs = setting.type === 'Beat Sync' ? { beat: beatProgress(visual, next, transitionLength) }
           : setting.type === 'AI-assisted' ? { suggestion: suggestedTransition(assetFeatures(visibleAsset), assetFeatures(asset)) }
           : undefined;
         drawTransition(setting.type, progress, context, transitionContext, inputs);
       }
     }
-    // Use source frames before the in-point when they are available.
-    if (asset.type === 'video') seekTransitionMedia(media, Math.max(0, next.start - remaining));
   }
   if (!matteOnly) {
     if (visibleAsset) drawTimelineEffects(context, position, visual, visibleAsset.media);
@@ -4096,6 +4322,7 @@ function refresh() {
   syncFramecutSongSpecSelection(clip);
   renderTimeline();
   inspector();
+  prewarmTransitions();
   draw(Boolean(playback));
 }
 
@@ -4496,6 +4723,8 @@ async function renderExport() {
         $('exportText').textContent = 'Rendering at playback speed…';
       }
     }
+    if (job.cancel) return;
+    await warmTransitions();
     if (job.cancel) return;
     maskHistory.delete(canvas);
     maskHistory.delete(transitionLayer);
