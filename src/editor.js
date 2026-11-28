@@ -1132,11 +1132,25 @@ function syncIncoming(entry, rawTarget, playing, rate = 1) {
 // Only cuts near the playhead keep live clones: windows that start within the lookahead (4 s playing or
 // exporting, 2 s paused) or are still in progress / handing off, nearest first, at most incomingCap clones.
 const incomingCap = 4;
+const handoffGood = { id: '', count: 0, doneAt: 0 };
+
+// Media time of the frame an element last presented (requestVideoFrameCallback), which can trail currentTime.
+function trackPresented(media) {
+  if (media.presentedTracked || !media.requestVideoFrameCallback) return;
+  media.presentedTracked = true;
+  const note = (now, metadata) => {
+    media.presentedTime = metadata.mediaTime;
+    media.requestVideoFrameCallback(note);
+  };
+  media.requestVideoFrameCallback(note);
+}
+const handoffProbe = Object.assign(document.createElement('canvas'), { width: 2, height: 2 }).getContext('2d');
 let transitionCuts = [];
 let transitionCutsKey = NaN;
 const nearCuts = [null, null, null, null];
 const nearDist = [0, 0, 0, 0];
 const wantedCuts = [null, null, null, null];
+const wantedNeeds = [0, 0, 0, 0];
 let wantedCount = 0;
 let wantedStamp = '';
 
@@ -1159,9 +1173,9 @@ function rebuildTransitionCuts() {
     const span = transitionDuration(clip, next, setting.duration);
     // Centred window: the incoming clone starts span / 2 before the in-point, the outgoing clone runs past the out-point.
     const remapped = setting.type === 'Speed Ramp' || setting.type === 'Slow-Motion Blur';
-    transitionCuts.push({ ws: next.at - span / 2, we: next.at + Math.max(span / 2, 1), inKey: 'in:' + next.id, inAsset: assets.get(next.asset),
+    transitionCuts.push({ ws: next.at - span / 2, we: next.at + 2, outEnd: next.at + span / 2 + .25, inKey: 'in:' + next.id, inAsset: assets.get(next.asset),
       inAt: Math.max(0, next.start - span / 2), outKey: 'out:' + clip.id, outAsset: assets.get(clip.asset),
-      outAt: Math.max(0, remapped ? clip.end - span / 2 : clip.end - .5 / 30), count: 2, stamp: next.id });
+      outAt: Math.max(0, remapped ? clip.end - span / 2 : clip.end - .5 / 30), stamp: next.id });
   }
 }
 
@@ -1192,17 +1206,20 @@ function updateIncomingWindow(position, fast = false, force = false) {
   let stamp = '';
   for (let i = 0; i < found; i++) {
     const cut = nearCuts[i];
-    if (used + cut.count > incomingCap) continue;
-    used += cut.count;
+    // After its window only the incoming clone is still needed (until the clip's own element takes over).
+    const need = position < cut.outEnd ? 2 : 1;
+    if (used + need > incomingCap) continue;
+    used += need;
+    wantedNeeds[count] = need;
     wantedCuts[count++] = cut;
-    stamp += cut.stamp + ',';
+    stamp += cut.stamp + need + ',';
   }
   if (!force && stamp === wantedStamp) return;
   wantedStamp = stamp;
   wantedCount = count;
   for (const key of [...incomingClones.keys()]) {
     let keep = false;
-    for (let i = 0; i < count; i++) if (wantedCuts[i].inKey === key || wantedCuts[i].outKey === key) keep = true;
+    for (let i = 0; i < count; i++) if (wantedCuts[i].inKey === key || wantedNeeds[i] === 2 && wantedCuts[i].outKey === key) keep = true;
     if (!keep) releaseIncoming(key);
   }
   for (let i = 0; i < count; i++) {
@@ -1216,7 +1233,7 @@ function updateIncomingWindow(position, fast = false, force = false) {
       }
     };
     warm(cut.inKey, cut.inAsset, cut.inAt);
-    warm(cut.outKey, cut.outAsset, cut.outAt);
+    if (wantedNeeds[i] === 2) warm(cut.outKey, cut.outAsset, cut.outAt);
   }
 }
 
@@ -2763,18 +2780,32 @@ function renderFrame(position, running = false, preciseSeek = false) {
       outgoing = outEntry;
     }
   }
-  // The incoming clip's own element only starts decoding at the cut and can show stale frames or still be seeking for a
-  // while: keep drawing from its clone, which is already in sync, for the first second.
+  // The incoming clip's own element only starts decoding at the cut and shows stale frames until it has presented fresh
+  // ones: keep drawing from its clone, which is already in sync, until the element has presented the right frame for a few
+  // frames in a row (at most 2 s).
   let handoff;
-  if (!secondHalf && visual && visibleAsset?.type === 'video' && position - visual.at < 1) {
+  if (handoffGood.id.endsWith(':done') && (position < handoffGood.doneAt - .5 || handoffGood.id !== visual?.id + ':done')) Object.assign(handoffGood, { id: '', count: 0 });
+  if (!secondHalf && visual && visibleAsset?.type === 'video' && position - visual.at < 2) {
     const entry = incomingClones.get('in:' + visual.id);
-    const wanted = visual.start + position - visual.at;
-    const main = visibleAsset.media;
-    if (entry && entry.asset === visibleAsset) {
-      handoff = entry;
-      liveIncoming.add(entry);
-      syncIncoming(entry, wanted, playingIncoming);
+    if (entry && entry.asset === visibleAsset && handoffGood.id !== visual.id + ':done') {
+      const wanted = visual.start + position - visual.at;
+      const main = visibleAsset.media;
+      trackPresented(main);
+      const ready = !main.seeking && main.readyState >= 2 && Math.abs((main.presentedTime ?? NaN) - wanted) <= 1.5 / 30;
+      if (handoffGood.id !== visual.id) Object.assign(handoffGood, { id: visual.id, count: 0 });
+      handoffGood.count = ready ? handoffGood.count + 1 : 0;
+      if (handoffGood.count >= 3) {
+        Object.assign(handoffGood, { id: visual.id + ':done', doneAt: position });
+      } else {
+        handoff = entry;
+        liveIncoming.add(entry);
+        syncIncoming(entry, wanted, playingIncoming);
+      }
     }
+  }
+  if (visual && visibleAsset?.type === 'video' && visibleAsset.media.readyState >= 2 && position - visual.at < 1.5) {
+    // Keep pulling frames from the clip's own element while a clone is drawn in its place, or its first read is stale.
+    handoffProbe.drawImage(visibleAsset.media, 0, 0, 2, 2);
   }
   for (const entry of incomingClones.values()) {
     if (liveIncoming.has(entry)) continue;
