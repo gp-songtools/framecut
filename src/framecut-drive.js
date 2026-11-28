@@ -111,13 +111,13 @@ function placeClipsFromDrive() {
     const folder = await framecutSongFolder({ create: false });
     const dir = await SongDrive.subfolder(folder.id, 'clips', { create: false });
     if (!dir) {
-      notify("No clips folder in this song's Drive folder yet. Save clips to Drive in GP Producer first.");
+      notify("No clips folder in this song’s Drive folder yet. Save clips to Drive in GP Producer first.");
       return;
     }
     const entries = (await SongDrive.list(dir.id))
       .map(file => ({ name: file.name, size: Number(file.size) || 0, type: file.mimeType, driveId: file.id }));
     if (!entries.length) {
-      notify("The clips folder in this song's Drive folder is empty.");
+      notify("The clips folder in this song’s Drive folder is empty.");
       return;
     }
     notify('Found ' + entries.length + (entries.length === 1 ? ' file' : ' files') + ' in Google Drive.');
@@ -145,8 +145,10 @@ async function saveExportToDrive(entry) {
 async function saveExportToDriveAfterExport(entry) {
   try {
     await saveExportToDrive(entry);
+    return true;
   } catch (error) {
     notify(driveError(error) + ' Use Drive › Save last export to Drive to try again.');
+    return false;
   }
 }
 
@@ -191,7 +193,8 @@ function openProjectFromDrive() {
     const dir = await SongDrive.subfolder(folder.id, 'projects', { create: false });
     const files = dir ? (await SongDrive.list(dir.id)).filter(file => /\.framecut$/i.test(file.name)) : [];
     if (!files.length) {
-      notify("No projects saved to this song's Drive folder yet.");
+      notify("No projects saved to this song’s Drive folder yet.");
+      showDriveProjects([], folder.name);
       return;
     }
     files.sort((a, b) => String(b.modifiedTime || '').localeCompare(String(a.modifiedTime || '')));
@@ -203,6 +206,7 @@ function openProjectFromDrive() {
 function showDriveProjects(files, folderName) {
   const list = $('driveProjectsList');
   $('driveProjectsFolder').textContent = 'GP Song Tools / ' + folderName + ' / projects';
+  $('driveProjectsStatus').textContent = files.length ? '' : "No Framecut projects in this song's Drive folder yet. Use Drive › Save project to Drive to add one.";
   list.replaceChildren(...files.map(file => {
     const item = document.createElement('li');
     const button = document.createElement('button');
@@ -235,6 +239,8 @@ function showDriveProjects(files, folderName) {
 function updateDriveMenu() {
   const button = $('driveSaveExport');
   button.disabled = !lastExport;
+  if (lastExport) button.removeAttribute('aria-describedby');
+  else button.setAttribute('aria-describedby', 'driveSaveExportWhy');
   button.title = lastExport ? 'Upload ' + lastExport.name + ' to this song\'s exports folder' : 'Export a video first';
 }
 

@@ -9,7 +9,7 @@ image = b64encode((source / "demo.jpg").read_bytes()).decode("ascii")
 script = "\n".join((source / name).read_text(encoding="utf-8") for name in (
     "text-animations.js", "text-atmosphere.js", "animation-panel.js", "overlays.js", "subject-tracking.js",
     "body-detail-tracking.js", "body-compositing.js", "effects.js", "preset-controls.js", "timeline-range.js",
-    "track-mixer.js", "audio-waveforms.js", "extracted-audio.js", "audio-fades.js", "audio-visualizers.js", "project-files.js",
+    "track-mixer.js", "audio-waveforms.js", "extracted-audio.js", "audio-fades.js", "audio-visualizers.js", "project-files.js", "media-tabs.js",
     "songspec.js", "songdrive.js", "song-spec.js", "framecut-drive.js", "place-clips.js", "lyrics-timing.js", "lyric-transcription.js", "lyrics.js", "editor.js"))
 script = script.replace("/* DEMO_IMAGE */", "data:image/jpeg;base64," + image)
 font_dir = source / "fonts"
@@ -84,4 +84,15 @@ bundle = "\n".join((
 ))
 page = (source / "index.html").read_text(encoding="utf-8").replace("<!-- PERSON_MODEL_BUNDLE -->", bundle)
 page = page.replace("/* BUNDLED_TITLE_FONT_FACES */", "\n".join(font_faces))
+ui_font_dir = source / "ui-fonts"
+ui_fonts = (
+    ("Space Grotesk", "space-grotesk-latin.woff2", "300 700"),
+    ("Atkinson Hyperlegible Next", "atkinson-hyperlegible-next-latin.woff2", "200 800"),
+)
+ui_font_faces = "\n".join(
+    f'@font-face{{font-family:{dumps(family)};font-weight:{weight};font-style:normal;font-display:swap;'
+    f'src:url(data:font/woff2;base64,{b64encode((ui_font_dir / filename).read_bytes()).decode("ascii")}) format("woff2")}}'
+    for family, filename, weight in ui_fonts
+)
+page = page.replace("/* BUNDLED_UI_FONT_FACES */", ui_font_faces)
 (root / "index.html").write_text(page.replace("/* APP_SCRIPT */", script), encoding="utf-8")

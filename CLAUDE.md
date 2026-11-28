@@ -21,6 +21,7 @@
 
 ## Architecture and key files
 
+- Follow `design-system/framecut/MASTER.md` (tokens, track colours, type, components) and `design-system/framecut/pages/editor.md` (layout plan) for UI changes. UI fonts (Space Grotesk, Atkinson Hyperlegible Next) live in `src/ui-fonts/` and are embedded by `build.py`; `src/fonts/` is only for text-clip fonts. `src/media-tabs.js` switches the Media column's tabs. Nothing below 13px; numbers use tabular figures.
 - Edit `src/index.html` for markup and CSS. `build.py` concatenates the shared-scope JS files in a fixed order and embeds vendor assets, models, and fonts.
 - Keep `assets` and `clips` distinct in `src/editor.js`. Assets hold media elements and blob URLs. Clips reference an asset ID and store editable timeline settings.
 - Use `clip.at` for timeline position and `clip.start` / `clip.end` for source in/out in seconds. Convert with `clip.start + position - clip.at`.

@@ -62,10 +62,52 @@ function songSpecInDialog(spec) {
   return '';
 }
 
+const placeClipsExplanation = 'Place clips puts each scene\'s clip on the timeline from the song spec\'s Video sequence. ' +
+  'Open a song spec first (Song spec › Open file…, or drop a .songspec.md here).';
+const placeClipsNoVideo = 'This song spec has no Video sequence yet, so there are no scenes to place. ' +
+  'Add one in GP Producer, then open the updated .songspec.md here.';
+
+function showPlaceClipsHint(text) {
+  const hint = $('placeClipsHint');
+  if (!hint) return;
+  hint.textContent = text || '';
+  hint.hidden = !text;
+}
+
+function placeClipsFromMedia() {
+  const spec = activeFramecutSongSpec();
+  if (songSpecLineCount(spec?.video)) {
+    showPlaceClipsHint('');
+    openPlaceFilePicker();
+    return;
+  }
+  showPlaceClipsHint(spec ? placeClipsNoVideo : placeClipsExplanation);
+  const details = $('songSpecMount').querySelector('details');
+  if (details) details.open = true;
+  $('songSpecPanel').scrollIntoView?.({ block: 'nearest' });
+}
+
+function songSpecHasContent() {
+  try {
+    const text = SongSpec.store.load();
+    return Boolean(text) && SongSpec.summary(SongSpec.parse(text)).some(row => row.present);
+  } catch {
+    return false;
+  }
+}
+
 function renderFramecutSongSpec() {
   const box = $('songSpecFrom');
   if (!box) return;
   const spec = activeFramecutSongSpec();
+  const help = $('songSpecHelp');
+  if (help) {
+    help.textContent = 'No sections yet. Open a .songspec.md (Open file… above, or drop it on Media) to use its lyrics and Video sequence.';
+    help.hidden = songSpecHasContent();
+  }
+  const hasVideo = songSpecLineCount(spec?.video) > 0;
+  $('placeClipsDrive').hidden = !hasVideo;
+  if (hasVideo) showPlaceClipsHint('');
   const audio = active()?.track === 'audio';
   songSpecAudioSelected = audio;
   const dialogOpen = $('lyricsDialog').open;
@@ -96,7 +138,7 @@ function renderFramecutSongSpec() {
     if (title) row.title = title;
     if (used) row.append(make('b', 'In use', 'spec-used'));
     else {
-      const button = make('button', 'Use in Import Lyrics');
+      const button = make('button', 'Use in Import lyrics');
       button.type = 'button';
       button.disabled = !audio && !dialogOpen;
       if (button.disabled) button.title = 'Select an audio clip first';
@@ -133,7 +175,7 @@ function renderFramecutSongSpec() {
     rows.push(row);
   }
   for (const note of spec.stale) rows.push(make('p', note, 'spec-stale'));
-  if (inUse) rows.push(make('p', 'Import Lyrics is using from the song spec: ' + inUse, 'spec-used'));
+  if (inUse) rows.push(make('p', 'Import lyrics is using from the song spec: ' + inUse, 'spec-used'));
   if (!fields.length && !rows.length) {
     box.hidden = true;
     return;
@@ -235,6 +277,8 @@ function isSongSpecFile(file) {
 }
 
 function connectFramecutSongSpec() {
+  $('placeClips').onclick = placeClipsFromMedia;
+  $('placeClipsDrive').onclick = placeClipsFromDrive;
   framecutSongSpecPanel = SongSpec.mountPanel($('songSpecMount'), { onChange: renderFramecutSongSpec });
   SongSpec.store.onChange(renderFramecutSongSpec);
   renderFramecutSongSpec();

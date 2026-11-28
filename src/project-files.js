@@ -250,6 +250,11 @@ async function openProjectFile(file) {
 }
 
 function connectProjectFiles() {
+  window.addEventListener('beforeunload', event => {
+    if (openingProject || projectEditState() === savedProjectState) return;
+    event.preventDefault();
+    event.returnValue = '';
+  });
   savedProjectState = projectEditState();
   const input = $('projectFile');
   $('saveProject').onclick = saveProjectFile;

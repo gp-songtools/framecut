@@ -27,7 +27,7 @@ function syncLyricsHandoff() {
   if (pendingLyricsHandoff) {
     const audio = pendingLyricsHandoff.audioName;
     $('lyricsHandoffStatus').textContent = 'Lyrics received from Auralyrics' + (audio ? ' for ' + audio : '') +
-      '. Select the matching Audio clip and choose Import Lyrics.';
+      '. Select the matching Audio clip and choose Import lyrics.';
   }
 }
 
@@ -167,7 +167,7 @@ async function runLyricTranscription() {
   const text = $('lyricsText');
   const message = $('lyricsMessage');
   if (!asset || !clips.includes(clip)) {
-    message.textContent = 'Reopen Import Lyrics from the audio clip you want to use.';
+    message.textContent = 'Reopen Import lyrics from the audio clip you want to use.';
     return;
   }
   const { start, end } = clip;
@@ -244,7 +244,7 @@ async function runLyricTranscription() {
     const matched = alignment && alignment.matched < cues.length
       ? ' Estimated timing for ' + (cues.length - alignment.matched) + ' unmatched lines.' : '';
     setStatus((align ? 'Aligned ' : 'Transcribed ') + cues.length + ' lyric ' +
-      (cues.length === 1 ? 'line.' : 'lines.') + matched + ' Review the timestamps, then choose Import Lyrics.');
+      (cues.length === 1 ? 'line.' : 'lines.') + matched + ' Review the timestamps, then choose Import lyrics.');
   } catch (error) {
     setStatus(error.message);
   } finally {
@@ -313,6 +313,7 @@ function openLyricsDialog(audio) {
   syncLyricEngine();
   syncSaveTimedLyrics();
   $('lyricsDialog').showModal();
+  if (matchMedia('(pointer: fine)').matches) $('lyricsText').focus();
   renderFramecutSongSpec();
 }
 
@@ -399,7 +400,7 @@ function connectLyricsImport() {
     if (activeLyricTranscription) return;
     const audio = lyricsAudioClip;
     if (!clips.includes(audio)) {
-      message.textContent = 'Reopen Import Lyrics from the audio clip you want to use.';
+      message.textContent = 'Reopen Import lyrics from the audio clip you want to use.';
       return;
     }
     const { cues, untimed } = parseLrc(text.value);
